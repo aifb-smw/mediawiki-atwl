@@ -20,6 +20,8 @@ class Test1 extends SpecialPage {
 	}
 	
 	public function getTestSMWQueryResult() {
+		global $smwgDefaultStore;
+		
 		// construct the parameters needed to create an artificial SMWQueryResult	
 		foreach ($this->testpages as $titleText) {
 			$results[] = SMWWikiPageValue::makePageFromTitle( Title::newFromText($titleText) ); //SMWWikiPageValue
@@ -30,7 +32,7 @@ class Test1 extends SpecialPage {
 		}
 		
 		//create the artificial SMWQueryResult
-		return new SMWQueryResult( $printRequests, new SMWQuery(), $results, new SMWSQLStore2() );
+		return new SMWQueryResult( $printRequests, new SMWQuery(), $results, new $smwgDefaultStore() );
 	}
 
 	public function execute($query = '') {
