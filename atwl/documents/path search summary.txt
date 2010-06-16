@@ -1,0 +1,48 @@
+Here, as far as I can tell, is how path search works in Enhanced Retrieval 1.3.5.
+
+Enter through USSpecialPage at includes/UnifiedSearchSpecialPage.php.
+
+The search string is split into keywords and a Lucene search executed. (This is the case in both text and path search).
+
+For path search, the list of pages returned by lucene search provides the pages to search for paths following from. (Line ~250).
+
+us_doPathSearch (in PathSearch/doPathSearch.php) is then called, which instantiates a PathSearchCore object (PathSearchCore.php).
+
+PathSearchCore::doSearch() is then called, with a parameter $queryArr like below.  The numbers refer to namespaces.
+
+Array
+(
+    [0] => Array
+        (
+            [0] => Course
+            [1] => 10
+        )
+
+    [1] => Array
+        (
+            [0] => professor
+            [1] => -1
+        )
+
+)
+
+
+PathSearchCore::evalPath() is then called, which attempts to find a path between the pages/properties using PSC_Path (PSC_Path.php) as storage.
+
+Then PathSearchCore::getPathInstances() fetches results for each path using getTripletResults() and getInstanceResult(), which interface directly with the database to get triplets.
+
+This allows the HTML with all the path interpretations (and previews of their results) to be printed.  More importantly, when a path interpretation is selected, it fires an ajax call like 
+
+http://localhost/wiki/index.php?action=ajax&rs=us_getPathDetails&rsargs[]=65,122|1,177
+
+or
+
+http://localhost/wiki/index.php?action=ajax&rs=us_getPathDetails&rsargs[]=65,122|1,177,122|-1,65
+
+We can tell that $rsargs contains a structured query that we can reuse (well, not a query, but a representation of a path that is then used to get all the path instances using individual queries).  It seems that the numbers correspond to the smw_id of (categories or pages) and properties and the 1 and -1 indicate the directionality of the property.
+
+The problem is how to integrate this with SMW_PrintRequest.  I think maybe we should make a child class of SMW_PrintRequest that handles another query mode in addition to const PRINT_CATS, PRINT_PROP, PRINT_THIS, PRINT_CCAT.  Something like PRINT_PATH.  It can then take as the $data argument for what should be printed, a path in the format specified in $rsargs, and an smw_id of what to print.  So if we have a path like 65,122|1,177,176|1,168,176|-1,164 representing Category:Course->(Property:Professor)Category:Professor->(Property:Field)Category:Field(Property:Field)<-Category:Department
+
+then we can do something like SMW_PathPrintRequest(SMW_PathPrintRequest::PRINT_PATH, $label, array("65,122|1,177,176|1,168,176|-1,164", "164") if we want to get the Departments for that path instance.  We can make a PrintRequest for each column on the path like this.  This would be rather inefficient, though, because if we used the UnifiedSearch Path code then we would be looking up all the data for a path each time for every single column we wanted to print.  This could be avoided somehow. Possibly some manipulation of SMWResultArrays is required.
+
+On second thought, I think making a child class of SMW_PrintRequest specifically for printing path nodes should be fine, we can just pass it a reference to the path data storage object.  I predict it would only take me a few hours to implement this, i.e. we could have SemanticResultFormats on the Path Search results page soon.
