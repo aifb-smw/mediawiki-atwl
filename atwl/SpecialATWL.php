@@ -1,6 +1,17 @@
 <?php
 
+define( 'ATW_CAT', 0 ); // category - [[Category:X]]
+define( 'ATW_PAGE', 1 ); // page - [[X]]
+define( 'ATW_PROP', 2 ); // property - [[X:Value]]
+define( 'ATW_VALUE', 3 ); // value - [[Property:X]]
+define( 'ATW_COMP', 4 ); // comparator - [[Property:[<>!~]Value]]
+define( 'ATW_WILD', 5 ); // wildcard - [[Property:*]]
+define( 'ATW_NUM', 6 ); // number (may be useful for use with comparators) - [[Property:<X]]
+define( 'ATW_OR', 7 ); // for disjunctions, i.e. [[Property:X]] OR [[Property:Y]]
+define( 'ATW_INIT', 8 ); // represents the beginning of the query string
+
 class SpecialATWL extends SpecialPage {
+	
 	public function __construct() {
 		parent :: __construct('ATWL');
 	}
@@ -24,14 +35,92 @@ class SpecialATWL extends SpecialPage {
 		$atwComparators = array("less than", "greater than", "<", ">", "<=", ">=", "not", "like");		
 		$atwStore = new ATWStore();		
 		
-		$qp = new ATWQueryParseTree( $queryString );
+		$qp = new ATWQueryTree( $queryString );
 		$wgOut->addHTML( $qp->testOutput() );
 
 		wfProfileOut('ATWL:execute');
 	}
+	
+	/**
+	 * takes $interpretation, an ordered array of ATWKeyword objects
+	 * and $params and $format, which are passed directly to SMWQueryProcessor::createQuery.
+	 * returns a query object based.
+	 */
+	public function getAskQuery($interpretation, $format = 'broadtable', $params = null ) {
+		
+		// set to true once we encounter a property not followed by a value or comparator		
+		$printoutMode = false; 
+		
+		$queryString = "";
+		$printouts = array();		
+		
+		for ($i = 0; $i<count($interpretation); $i++) {
+			$prevType = @$interpretation[$i-1];
+			$prevKeyword = @$interpretation[$i-1];
+			
+			$kw = $interpretation[$i];
+			
+			if ($prevType == ATW_PROP
+				&& !in_array($kw->type, array(ATW_VALUE, 
+				ATW_COMP, ATW_NUM)))
+				$printoutMode = true;			
+			
+			if ($kw->type == ATW_CAT) {
+				$queryString .= "[[Category:{$kw->keyword}]]";
+			} else if ($kw->type == ATW_PAGE) {
+				$queryString .= "[[{$kw->keyword}]]";
+			} else if ($kw->type == ATW_PROP) {
+				if ($printoutMode) {
+					$printouts[] = "?{$kw->keyword}";
+				} else {
+					$queryString .= "[[{$kw->keyword}::";
+				}
+			} else if ($kw->type == ATW_COMP) {
+				
+				if ( in_array($kw->keyword, array("less than", "<", "<=")) )
+					$queryString .= "<";
+				else if ( in_array($kw->keyword, array("greater than", ">", ">=")) )
+					$queryString .= ">";
+				else if ( $kw->keyword == "not" )
+					$queryString .= "!";
+				else if ( $kw->keyword == "like" )
+					$queryString .= "~";		
+								
+			} else if ($kw->type == ATW_VALUE) {
+				$queryString .= ($prevType == ATW_COMP && $prevKeyword == "like")
+								? "*{$kw->keyword}*]]" : $kw->keyword."]]";								
+			} else if ($kw->type == ATW_WILD) {
+				$queryString .= "+]]";
+			} 
+		}
+		
+		$params['format'] = $format;
+		
+		return SMWQueryProcessor::createQuery( $queryString, $params, SMWQueryProcessor::SPECIAL_PAGE , $format, $printouts );
+	}
+	
+	/**
+	 * takes an ordered array of ATWKeyword objects
+	 * and returns an Ask query string
+	 */
+	public function getAskQueryResultHTML($interpretation, $format = 'broadtable') {
+		$queryobj = $this->getAskQuery($interpretation, $format);
+		
+		$res = smwfGetStore()->getQueryResult( $queryobj );
+		
+		$printer = SMWQueryProcessor::getResultPrinter( $format, SMWQueryProcessor::SPECIAL_PAGE );
+		$query_result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
+		if ( is_array( $query_result ) ) {
+			$result .= $query_result[0];
+		} else {
+			$result .= $query_result;
+		}
+		
+		return $result;		
+	}
 }
 
-class ATWKWInterpretation {
+class ATWKeyword {
 	public function __construct($keyword, $type) {
 		$this->keyword = $keyword;
 		$this->type = $type;
@@ -39,20 +128,33 @@ class ATWKWInterpretation {
 }
 
 /**
- * takes the keyword string, creates an ATWQueryParseNode tree,
+ * takes the keyword string, creates an ATWQueryNode tree,
  * and provides the ability to order interpretations by likelihood of
  * being correct.
  */
-class ATWQueryParseTree {
+class ATWQueryTree {
 	protected $root;
+	
+	// a keyword of type key must be followed by one that has a type in value	
+	public static $atwExpectTypes = array(
+		ATW_INIT	=> array(ATW_CAT, ATW_PAGE),
+		ATW_CAT		=> array(ATW_CAT, ATW_PROP),
+		ATW_COMP 	=> array(ATW_VALUE, ATW_NUM),
+		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_NUM, ATW_WILD, ATW_COMP),
+		ATW_OR 		=> array(ATW_PROP),
+		ATW_PAGE	=> array(ATW_PROP),
+		ATW_WILD	=> array(ATW_PROP, ATW_OR),
+		ATW_VALUE	=> array(ATW_PROP, ATW_OR),
+		ATW_NUM		=> array(ATW_PROP, ATW_OR),
+	);	
 	
 	public function __construct($string) {
 		$this->queryString = $string;
 		$keywords = preg_split( "/\s+/", $string );		
-		$this->root = new ATWQueryParseNode( "", $keywords );
+		$this->root = new ATWQueryNode( array(""), $keywords );
 		
 		$this->interpretations = $this->getInterpretations($this->root);
-		$this->prune();
+		//$this->prune();
 	}
 	
 	/**
@@ -69,117 +171,76 @@ class ATWQueryParseTree {
 		$m .= "<pre>".print_r($this->root, true)."</pre>";
 		$m .= "<pre>".print_r($this->interpretations, true)."</pre>";
 		*/
-		
+		$i = 0;
+		$m = "";
 		foreach ($this->interpretations as $intr) {
-			$m .= "<p>Interpretation ".++$i.": <ul>";
+
+			$m .= "<p>Interpretation ".++$i.": ";
+			
+			//$m .= @SpecialATWL::getAskQueryResultHTML($intr);
+			
+			
+			$m .= "<ul>";
 			foreach ($intr as $kwObj) {
-				$m .= "<li>{$kwObj->keyword}: ";
 				$t = $kwObj->type;
-				if ($t == ATWKeywordData::PAGE) $m .= "page";
-				else if ($t == ATWKeywordData::CATEGORY) $m .= "category";
-				else if ($t == ATWKeywordData::PROPERTY) $m .= "property";
-				else if ($t == ATWKeywordData::VALUE) $m .= "property value";
-				else if ($t == ATWKeywordData::COMPARATOR) $m .= "comparator";
-				else if ($t == ATWKeywordData::WILDCARD) $m .= "wildcard";
-				else if ($t == ATWKeywordData::NUMBER) $m .= "number";
-				$m .= "</li>";
+				if ($t == ATW_INIT) continue;
+				$m .= "<li>{$kwObj->keyword}: ";
+
+				if ($t == ATW_PAGE) $m .= "page";
+				else if ($t == ATW_CAT) $m .= "category";
+				else if ($t == ATW_PROP) $m .= "property";
+				else if ($t == ATW_VALUE) $m .= "property value";
+				else if ($t == ATW_COMP) $m .= "comparator";
+				else if ($t == ATW_WILD) $m .= "wildcard";
+				else if ($t == ATW_NUM) $m .= "number";
+				else if ($t == ATW_OR) $m .= "OR (disjunction)";
+				$m .= "</li>";		
 			}
-			$m .= "</ul></p>";
+			$m .= "</ul>";
+			
+			
+			$m .= "</p>";
 		}
 		return $m;
 	}
 	
 	/**
-	 * recursively gets an array of possible interpretations 
-	 * for a node and its descendants
+	 * helper function for interpretations() that starts it off with root.
+	 * returns an array of ATWKeyword arrays representing interpretations
 	 */
-	protected function getInterpretations(&$node) {
-		// get different interpretations of the current node's query string
-		// i.e. if the same string can be both a page, category, property, etc.
-		foreach ($node->current->types as $t) {
-			$own[] = new ATWKWInterpretation($node->current->kwString, $t);
-		}
-		
-		// get an array of interpretations for the set of descendant/following
-		// query string components
-		$desc = array();
-		if (count($node->children) > 0) {
-			foreach ($node->children as $c) {
-				$desc[] = $this->getInterpretations($c);
-			}
-		}
-		
-		// handle base case (leaf with no children)
-		if (count($node->children) == 0) {
-			foreach ($own as $o) {
-				$r[] = array($o); //it expects descendants to be an array of arrays, not an array
-			}
-			return $r;
-		}
-		
-		// handle root case (kwString = "")
-		if (count($node->current->kwString) == 0) {
-			return $desc;
-		}		
-
-		
-		// todo: make this clearer
-		foreach ($own as $o) {
-			foreach ($desc as $d) {
-				foreach ($d as $e) { // I don't know why I had to add this extra level of depth, it should have worked without it //todo: understand
-					if ($o->keyword != "") {
-						$ret[] = array_merge(array($o), $e);
-					} else {
-						$ret[] = $e;
-					}
-				}
-			}
-		}
-		
-		return $ret;
+	protected function getInterpretations() {
+		return $this->interpretations($this->root, array(ATW_INIT));
 	}
 	
 	/**
-	 * removes certain impossible interpretations, including:
-	 *   no categories or pages exist
-	 *   a comparator is last
-	 *   a wildcard after a non-property
+	 * recursively gets an array of possible interpretations 
+	 * for a node and its descendants. respects $atwExpectTypes
 	 */
-	protected function prune() {
-		if (!isset($this->interpretations)) {
-			$this->getInterpretations();
-		}
-		
-		
-		foreach ($this->interpretations as $i => $intr) {
-			
-			$hasCatOrPage = false;
-			
-			foreach ($intr as $j => $kwObj) {
-				$curKw = $kwObj->keyword;
-				$nextKw = @$intr[$j+1]->keyword;
-				$curType = $kwObj->type;
-				$nextType = @$intr[$j+1]->keyword;
-				
-				// is a wildcard after a non-property?
-				if ($nextType == ATWKeywordData::WILDCARD && $curType != ATWKeywordData::PROPERTY) {
-					unset($this->interpretations[$i]);
-					break;						
-				}
-				
-				// test whether a category or page exists
-				$hasCatOrPage = ($hasCatOrPage || 
-					in_array($curType, array(ATWKeywordData::PAGE, ATWKeywordData::CATEGORY)));				 
+	protected function interpretations(&$node, $expectTypes) {
+		//echo "<pre>"; print_r($node); echo "</pre>";
+		$ret = array();	
+		if (empty($node->children)) { 		// base case
+			foreach ($node->current->types as $t) {
+				$ret[] = array(new ATWKeyword($node->current->kwString, $t));
 			}
-			
-			
-			if (!$hasCatOrPage) 	// no category or page
-				unset($this->interpretations[$i]);			
-			
-			if ($curType == ATWKeywordData::COMPARATOR)		// a comparator is last
-				unset($this->interpretations[$i]);			
-			
+			return $ret;
 		}
+		
+		foreach ($node->current->types as &$type) {
+			foreach ($node->children as &$child) {
+				if ($a = array_intersect($child->current->types, ATWQueryTree::$atwExpectTypes[$type])) {
+					foreach ($this->interpretations($child, $a) as $intr) {
+						if (in_array($intr[0]->type, ATWQueryTree::$atwExpectTypes[$type])) {
+							$ret[] = array_merge(array(new ATWKeyword($node->current->kwString, $type)), $intr);
+						}
+					}
+					
+				}
+			}			
+		}
+		
+		return $ret;
+		
 	}
 }
 
@@ -189,28 +250,34 @@ class ATWQueryParseTree {
  * is mostly useful for when we are recursively making an array out of the tree.
  * takes an array $remaining of the following components in the query string
  * and creates a child node for all valid splits of that component
- * i.e. for ATWQueryParseNode(array("course"), array("professor year foo bar")),
+ * i.e. for ATWQueryNode(array("course"), array("professor year foo bar")),
  * if both the pages (or category, property, or something else) "professor" and "professor year" exist
  * there will be child nodes created for "professor": "year foo bar" and "professor year" : "foo bar"
  */
-class ATWQueryParseNode {
+class ATWQueryNode {
 	public $current;
 	public $children;	
 	
-	function __construct($current, $remaining) {
+	function __construct($current, $remaining) {			
 		$this->current = new ATWKeywordData( $current );
-		$this->children = array(); //base case
+		$this->children = array();
 		
-		if (!$this->current->isValid()) {
-			$this->valid = false;
-			return;
-		}
+		// the possible types of the next keyword given the current keywords' valid types
+		$nextExpect = array();				
+		foreach (ATWQueryTree::$atwExpectTypes as $type => $validfollowers) {			
+			if (in_array($type, $this->current->types)) {
+				$nextExpect = array_merge($nextExpect, $validfollowers);
+			}
+		}			
 		
-		for ($i=1; $i <= count($remaining); $i++) {			
+		// populate array of valid children
+		for ($i=1; $i <= count($remaining); $i++) {
 			$nextCurrent = array_slice($remaining, 0, $i);
 			$nextRemaining = array_slice($remaining, $i);
-			$child = new ATWQueryParseNode( $nextCurrent, $nextRemaining );
-			if ($child->current->isValid()) {
+			
+			$child = new ATWQueryNode( $nextCurrent, $nextRemaining );
+			
+			if (array_intersect($child->current->types, $nextExpect)) {
 				$this->children[] = $child;
 			}
 
@@ -225,40 +292,46 @@ class ATWQueryParseNode {
 class ATWKeywordData {
 	public $types;
 	
-	const PAGE = 0;
-	const CATEGORY = 1;
-	const PROPERTY = 2;
-	const VALUE = 3;
-	const COMPARATOR = 4;
-	const WILDCARD = 5;
-	const NUMBER = 6; // for possible use with comparators when a property tends to have a numerical value
-	
 	public function __construct($keywords) {
 		global $atwStore, $atwComparators;
 		
-		$kwString = strtolower( @implode(" ", $keywords) );
-		$this->kwString = $kwString;
+		$this->kwString = strtolower(implode(" ", $keywords));		
+		$this->types = array();
 		
-		if ( $atwStore->isPage($kwString) ) 
-			$this->types[] = self::PAGE;
-			
-		if ( $atwStore->isCategory($kwString) )
-			$this->types[] = self::CATEGORY;
-			
-		if ( $atwStore->isProperty($kwString) )
-			$this->types[] = self::PROPERTY;
-			
-		if ( $atwStore->isPropertyValue($kwString) )
-			$this->types[] = self::VALUE;
+		// the order of these statements influences the order of interpretations, to a degree.
+		// for example, because ATW_CAT is first, <Category> <Property> will come before
+		// <Page> <Property>
 		
-		if ( $kwString == "*" )
-			$this->types[] = self::WILDCARD;
+		if ( $this->kwString == "" ) {
+			$this->types[] = ATW_INIT;
+			return;
+		}
+		
+		if ( $this->kwString == "*" ) {
+			$this->types[] = ATW_WILD;
+			return;
+		}
+		
+		if ( $atwStore->isCategory($this->kwString) )
+			$this->types[] = ATW_CAT;
+		
+		if ( $atwStore->isPage($this->kwString) ) 
+			$this->types[] = ATW_PAGE;
 			
-		if ( in_array($kwString, $atwComparators) )
-			$this->types[] = self::COMPARATOR;
+		if ( $atwStore->isProperty($this->kwString) )
+			$this->types[] = ATW_PROP;
 			
-		if ( is_numeric($kwString) )
-			$this->types[] = self::NUMBER;
+		if ( in_array($this->kwString, $atwComparators) )
+			$this->types[] = ATW_COMP;
+			
+		if ( $atwStore->isPropertyValue($this->kwString) )
+			$this->types[] = ATW_VALUE;
+			
+		if ( is_numeric($this->kwString) )
+			$this->types[] = ATW_NUM;
+			
+		if ( $this->kwString == "or" )
+			$this->types[] = ATW_OR;
 		
 	}
 	
@@ -272,6 +345,9 @@ class ATWKeywordData {
  * the titles of existing pages, categories, properties, and values,
  * and a cache for the results of these queries to prevent duplicating
  * queries.
+ * 
+ * We will want to implement a Lucene index, to get rid of the expensive
+ * database queries.
  */
 class ATWStore {
 	protected $pages, $categories, $properties, $values;
@@ -288,14 +364,13 @@ class ATWStore {
 	public function isPage($string) {
 		if (isset($this->pages[$string]))
 			return $this->pages[$string];
-		
 			
  		$smw_ids = $this->db->tableName('smw_ids');
  		
  		// todo: join on pages so we don't get results for
  		// property values with no pages
  		$query = "SELECT s.smw_id FROM $smw_ids s " .
-				 "WHERE LOWER(CONVERT(s.smw_sortkey USING latin1)) = '" . $this->db->strencode($string) ."'" .
+				 "WHERE s.smw_sortkey = '" . $this->db->strencode(ucfirst($string)) ."'" .
 				    "AND s.smw_namespace = 0";
 				    
 		if ($res = $this->db->query($query)) {
@@ -319,14 +394,12 @@ class ATWStore {
  		
  		//todo: check if CONVERT works with other DBMSes
  		$query = "SELECT s.smw_id FROM $smw_ids s " .
-				 "WHERE LOWER(CONVERT(s.smw_sortkey USING latin1)) = '" . $this->db->strencode($string) ."'" .
+				 "WHERE s.smw_sortkey = '" . $this->db->strencode(ucfirst($string)) ."'" .
 				    "AND s.smw_namespace = 14";
 				    
 		if ($res = $this->db->query($query)) {
 			$this->categories[$string] = ($row = $this->db->fetchObject($res)) ? true : false;
-		}
-		
-		
+		}	
 		
 		$this->db->freeResult($res);		
 		return $this->categories[$string];
@@ -344,7 +417,7 @@ class ATWStore {
 		$smw_ids = $this->db->tableName('smw_ids');
  		
  		$query = "SELECT s.smw_id FROM $smw_ids s " .
-				 "WHERE LOWER(CONVERT(s.smw_sortkey USING latin1)) = '" . $this->db->strencode($string) ."'" .
+				 "WHERE s.smw_sortkey = '" . $this->db->strencode(ucfirst($string)) ."'" .
 				    "AND s.smw_namespace = 102";
 				    
 		if ($res = $this->db->query($query)) {
@@ -368,7 +441,8 @@ class ATWStore {
 		$smw_atts2 = $this->db->tableName('smw_atts2');
  		
  		$query = "SELECT s.s_id FROM $smw_atts2 s " .
-				 "WHERE LOWER(CONVERT(s.value_xsd USING latin1)) = '" . $this->db->strencode($string) ."'";
+				 "WHERE s.value_xsd = '" . $this->db->strencode($string) ."'" .
+					"OR s.value_xsd = '" . $this->db->strencode(ucfirst($string)) ."'";
 				    
 		if ($res = $this->db->query($query)) {
 			$this->values[$string] = ($row = $this->db->fetchObject($res)) ? true : false;
