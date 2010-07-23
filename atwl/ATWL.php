@@ -21,7 +21,8 @@ function wfATWLSetup() {
 	$wgAutoloadClasses['ATWQueryNode'] = $dir . 'ATWQueryTree.php';
 	$wgAutoloadClasses['ATWKeywordData'] = $dir . 'ATWQueryTree.php';
 	$wgAutoloadClasses['ATWKeyword'] = $dir . 'ATWQueryTree.php';
-	$wgAutoloadClasses['ATWStore'] = $dir . 'ATWStore.php';
+	$wgAutoloadClasses['ATWKeywordStore'] = $dir . 'ATWKeywordStore.php';
+	$wgAutoloadClasses['ATWCategoryStore'] = $dir . 'ATWCategoryStore.php';
 	
 	
 }

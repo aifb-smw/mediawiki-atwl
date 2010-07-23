@@ -18,7 +18,7 @@ class SpecialATWL extends SpecialPage {
 
 	public function execute($query = '') {
 		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
-		global $atwStore, $atwComparators;
+		global $atwKwStore, $atwCatStore, $atwComparators;
 		wfProfileIn('ATWL:execute');
 		
 		$queryString = $wgRequest->getText('q');
@@ -33,7 +33,8 @@ class SpecialATWL extends SpecialPage {
 		$wgOut->addHTML($m);
 		
 		$atwComparators = array("less than", "greater than", "<", ">", "<=", ">=", "not", "like");		
-		$atwStore = new ATWStore();		
+		$atwKwStore = new ATWKeywordStore();		
+		$atwCatStore = new ATWCategoryStore();
 		
 		$qp = new ATWQueryTree( $queryString );
 		$wgOut->addHTML( $qp->testOutput() );

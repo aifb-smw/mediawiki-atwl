@@ -9,7 +9,7 @@
  * We will want to implement a Lucene index, to get rid of the expensive
  * database queries.
  */
-class ATWStore {
+class ATWKeywordStore {
 	protected $pages, $categories, $properties, $values;
 	protected $db;
 	

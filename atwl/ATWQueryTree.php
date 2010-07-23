@@ -43,6 +43,7 @@ class ATWQueryTree {
 	 * prints a debug output of the structure
 	 */
 	public function testOutput() {
+		global $atwCatStore;
 		// return "<pre>".print_r($this, true)."</pre>";
 		
 		if (count($this->interpretations) == 0) {
@@ -69,7 +70,10 @@ class ATWQueryTree {
 				$m .= "<li>{$kwObj->keyword}: ";
 
 				if ($t == ATW_PAGE) $m .= "page";
-				else if ($t == ATW_CAT) $m .= "category";
+				else if ($t == ATW_CAT) {
+					$m .= "category";
+					$m .= "<pre>".print_r($atwCatStore->fetch($kwObj->keyword), true)."</pre>";
+				}
 				else if ($t == ATW_PROP) $m .= "property";
 				else if ($t == ATW_VALUE) $m .= "property value";
 				else if ($t == ATW_COMP) $m .= "comparator";
@@ -175,7 +179,7 @@ class ATWKeywordData {
 	public $types;
 	
 	public function __construct($keywords) {
-		global $atwStore, $atwComparators;
+		global $atwKwStore, $atwComparators;
 		
 		$this->kwString = strtolower(implode(" ", $keywords));		
 		$this->types = array();
@@ -194,19 +198,19 @@ class ATWKeywordData {
 			return;
 		}
 		
-		if ( $atwStore->isCategory($this->kwString) )
+		if ( $atwKwStore->isCategory($this->kwString) )
 			$this->types[] = ATW_CAT;
 		
-		if ( $atwStore->isPage($this->kwString) ) 
+		if ( $atwKwStore->isPage($this->kwString) ) 
 			$this->types[] = ATW_PAGE;
 			
-		if ( $atwStore->isProperty($this->kwString) )
+		if ( $atwKwStore->isProperty($this->kwString) )
 			$this->types[] = ATW_PROP;
 			
 		if ( in_array($this->kwString, $atwComparators) )
 			$this->types[] = ATW_COMP;
 			
-		if ( $atwStore->isPropertyValue($this->kwString) )
+		if ( $atwKwStore->isPropertyValue($this->kwString) )
 			$this->types[] = ATW_VALUE;
 			
 		if ( is_numeric($this->kwString) )
