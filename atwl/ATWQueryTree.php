@@ -37,6 +37,7 @@ class ATWQueryTree {
 		$this->root = new ATWQueryNode( array(""), $keywords );
 		
 		$this->getPaths();
+		$this->sort();
 	}
 	
 	/**
@@ -46,21 +47,21 @@ class ATWQueryTree {
 		global $atwCatStore;
 		// return "<pre>".print_r($this, true)."</pre>";
 		
-		if (count($this->paths) == 0) {
+		if (count($this->paths[0]) == 0) {
 			return "There were no valid interpretations for the query <em>{$this->queryString}</em>";
 		}
 		
 		$i = 0;
 		$m = "";
-		foreach ($this->paths as $intr) {
+		foreach ($this->paths as $path) {
 
-			$m .= "<p>Interpretation ".++$i.": ";
+			$m .= "<p>Interpretation ".++$i." (score ".round($path[1],3)."): ";
 			
 			//$m .= @SpecialATWL::getAskQueryResultHTML($intr);
 			
 			
 			$m .= "<ul>";
-			foreach ($intr as $kwObj) {
+			foreach ($path[0] as $kwObj) {
 				$t = $kwObj->type;
 				if ($t == ATW_INIT) continue;
 				$m .= "<li>{$kwObj->keyword}: ";
@@ -68,7 +69,6 @@ class ATWQueryTree {
 				if ($t == ATW_PAGE) $m .= "page";
 				else if ($t == ATW_CAT) {
 					$m .= "category";
-					//$m .= "<pre>".print_r($atwCatStore->fetch($kwObj->keyword), true)."</pre>";
 				}
 				else if ($t == ATW_PROP) $m .= "property";
 				else if ($t == ATW_VALUE) $m .= "property value";
@@ -114,8 +114,7 @@ class ATWQueryTree {
 						if (in_array($intr[0]->type, ATWQueryTree::$atwExpectTypes[$type])) {
 							$ret[] = array_merge(array(new ATWKeyword($node->current->kwString, $type)), $intr);
 						}
-					}
-					
+					}				
 				}
 			}			
 		}
@@ -125,7 +124,15 @@ class ATWQueryTree {
 	}
 	
 	public function sort() {
-		//$compare = create_function(
+		$scored = array();
+		foreach ($this->paths as $path) {
+			$scored[] = array($path, $this->score($path));
+		}
+		
+		usort($scored, create_function('$a,$b', 'if ($a[1] == $b[1]) return 0; else return $a[1] > $b[1] ? -1 : 1;'));
+		
+		$this->paths = $scored;
+
 	}
 	
 	/**
@@ -134,7 +141,7 @@ class ATWQueryTree {
 	public function score(&$path) {
 		global $atwCatStore;
 		
-		$score = 0;
+		$score = 0.0;
 		
 		// first, if there are multiple selected categories, get the concordance
 		// the fact that we don't do anything similar in the case that a page, not a category,
@@ -147,28 +154,38 @@ class ATWQueryTree {
 			}
 		}
 				
-		if (count($cats) > 1) $score += $atwKwStore->overlap($cats);
+		if (count($cats) > 1) {
+			$score += $atwCatStore->overlap($cats);
+		}
 		
 		// add the average concordance with the first category 
 		// of all of the properties in the query interpretation
-		$total = $n = 0;
-		$firstCat = $cats[0];	// for simplicity we only test overlap with first category
-		for ($i=0; $i<count($path); $i++) {
-			if ($path[$i]->type == ATW_PROP) {
-				$n++;
-				if (@$path[$i+1]->type == ATW_PAGE) {
-					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'rel');
-				} else if (in_array(@$path[$i+1]->type, array(ATW_VALUE, ATW_COMP))) {
-					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'att');
-				} else {
-					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'all');
+		if (!empty($cats) && $firstCat = $cats[0]) {		// for simplicity we only test overlap with first category
+			$total = $n = (float)0;
+			
+			for ($i=0; $i<count($path); $i++) {
+				if ($path[$i]->type == ATW_PROP) {
+					$n++;
+					if (@$path[$i+1]->type == ATW_PAGE) {
+						$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'rel');
+					} else if (in_array(@$path[$i+1]->type, array(ATW_VALUE, ATW_COMP))) {
+						$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'att');
+					} else {
+						$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'all');
+					}
 				}
 			}
+				
+			$score += pow($total/$n,2);
+			
+		} else { 	// a page, not a category, is selected
+			$page = $path[0]->keyword;
+			
+			//todo: add code here
 		}
 		
-		$score += (float)$total/$n;
-		
 		return $score;
+		//return $z++;
 		
 	}
 }

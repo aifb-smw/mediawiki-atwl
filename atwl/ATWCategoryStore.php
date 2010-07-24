@@ -62,7 +62,7 @@ class ATWCategoryStore {
 		
 		arsort($all);
 		
-		$this->store[$categoryname] = array('all' => $all, 'atts' => $atts, 'rels' => $rels);
+		$this->store[$categoryname] = array('all' => $all, 'att' => $atts, 'rel' => $rels);
 		return $this->store[$categoryname];			
 	}
 	
@@ -84,12 +84,19 @@ class ATWCategoryStore {
 	 */
 	public function propertyRating($category, $property, $type = 'all') {
 		$data = $this->fetchAll($category);
+		$property = ucfirst($property);
 		
 		// based on number of pages with Modification date property, which should be all,
 		// and regardless, is representative
-		$count = reset($data[$type]);
+		foreach ($data[$type] as $p => $num) {
+			$count = $num;
+			break;
+		}
+		//$count = reset($data[$type]);
 		
-		return (float)$data[$type][$property]/$count;
+		$s = isset($data[$type][$property]) ? (float)$data[$type][$property] : (float)0;
+		$c = (float)$count;
+		return $s/$c;
 	}
 	
 	/**
@@ -99,7 +106,7 @@ class ATWCategoryStore {
 	public function overlap($cats) {
 		$facets = array_map(array(&$this, "_facets"), $cats);
 		$intersection = call_user_func_array('array_intersect', $facets);
-		return (count($intersection)/20.0)^2;		
+		return (float)pow((float)count($intersection)/20.0,2.0);		
 	}
 	
 	public function _facets($cat) {
