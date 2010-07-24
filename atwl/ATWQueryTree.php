@@ -12,7 +12,7 @@ class ATWKeyword {
 
 /**
  * takes the keyword string, creates an ATWQueryNode tree,
- * and provides the ability to order interpretations by likelihood of
+ * flattens the tree as valid possible interpretationsprovides the ability to order interpretations by likelihood of
  * being correct.
  */
 class ATWQueryTree {
@@ -23,7 +23,7 @@ class ATWQueryTree {
 		ATW_INIT	=> array(ATW_CAT, ATW_PAGE),
 		ATW_CAT		=> array(ATW_CAT, ATW_PROP),
 		ATW_COMP 	=> array(ATW_VALUE, ATW_NUM),
-		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_NUM, ATW_WILD, ATW_COMP),
+		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_NUM, ATW_WILD, ATW_COMP, ATW_PROP),
 		ATW_OR 		=> array(ATW_PROP),
 		ATW_PAGE	=> array(ATW_PROP),
 		ATW_WILD	=> array(ATW_PROP, ATW_OR),
@@ -36,7 +36,7 @@ class ATWQueryTree {
 		$keywords = preg_split( "/\s+/", $this->queryString );		
 		$this->root = new ATWQueryNode( array(""), $keywords );
 		
-		$this->interpretations = $this->getInterpretations();
+		$this->getPaths();
 	}
 	
 	/**
@@ -46,17 +46,13 @@ class ATWQueryTree {
 		global $atwCatStore;
 		// return "<pre>".print_r($this, true)."</pre>";
 		
-		if (count($this->interpretations) == 0) {
+		if (count($this->paths) == 0) {
 			return "There were no valid interpretations for the query <em>{$this->queryString}</em>";
 		}
 		
-		/*
-		$m .= "<pre>".print_r($this->root, true)."</pre>";
-		$m .= "<pre>".print_r($this->interpretations, true)."</pre>";
-		*/
 		$i = 0;
 		$m = "";
-		foreach ($this->interpretations as $intr) {
+		foreach ($this->paths as $intr) {
 
 			$m .= "<p>Interpretation ".++$i.": ";
 			
@@ -72,7 +68,7 @@ class ATWQueryTree {
 				if ($t == ATW_PAGE) $m .= "page";
 				else if ($t == ATW_CAT) {
 					$m .= "category";
-					$m .= "<pre>".print_r($atwCatStore->fetch($kwObj->keyword), true)."</pre>";
+					//$m .= "<pre>".print_r($atwCatStore->fetch($kwObj->keyword), true)."</pre>";
 				}
 				else if ($t == ATW_PROP) $m .= "property";
 				else if ($t == ATW_VALUE) $m .= "property value";
@@ -91,18 +87,17 @@ class ATWQueryTree {
 	}
 	
 	/**
-	 * helper function for interpretations() that starts it off with root.
-	 * returns an array of ATWKeyword arrays representing interpretations
+	 * returns the flattened trees as an array of paths (query interpretations)
 	 */
-	protected function getInterpretations() {
-		return $this->interpretations($this->root, array(ATW_INIT));
+	protected function getPaths() {
+		$this->paths = $this->flatten($this->root, array(ATW_INIT));
 	}
 	
 	/**
 	 * recursively gets an array of possible interpretations 
 	 * for a node and its descendants. respects $atwExpectTypes
 	 */
-	protected function interpretations(&$node, $expectTypes) {
+	protected function flatten(&$node, $expectTypes) {
 		//echo "<pre>"; print_r($node); echo "</pre>";
 		$ret = array();	
 		if (empty($node->children)) { 		// base case
@@ -115,7 +110,7 @@ class ATWQueryTree {
 		foreach ($node->current->types as &$type) {
 			foreach ($node->children as &$child) {
 				if ($a = array_intersect($child->current->types, ATWQueryTree::$atwExpectTypes[$type])) {
-					foreach ($this->interpretations($child, $a) as $intr) {
+					foreach ($this->flatten($child, $a) as $intr) {
 						if (in_array($intr[0]->type, ATWQueryTree::$atwExpectTypes[$type])) {
 							$ret[] = array_merge(array(new ATWKeyword($node->current->kwString, $type)), $intr);
 						}
@@ -126,6 +121,54 @@ class ATWQueryTree {
 		}
 		
 		return $ret;
+		
+	}
+	
+	public function sort() {
+		//$compare = create_function(
+	}
+	
+	/**
+	 * returns an estimate of the likelihood that $path is a useful query interpretation
+	 */
+	public function score(&$path) {
+		global $atwCatStore;
+		
+		$score = 0;
+		
+		// first, if there are multiple selected categories, get the concordance
+		// the fact that we don't do anything similar in the case that a page, not a category,
+		// is the selected item gives a desirable bias to interpretations that have categories
+		
+		$cats = array();
+		foreach ($path as $kwObj) {
+			if ($kwObj->type == ATW_CAT) {
+				$cats[] = $kwObj->keyword;
+			}
+		}
+				
+		if (count($cats) > 1) $score += $atwKwStore->overlap($cats);
+		
+		// add the average concordance with the first category 
+		// of all of the properties in the query interpretation
+		$total = $n = 0;
+		$firstCat = $cats[0];	// for simplicity we only test overlap with first category
+		for ($i=0; $i<count($path); $i++) {
+			if ($path[$i]->type == ATW_PROP) {
+				$n++;
+				if (@$path[$i+1]->type == ATW_PAGE) {
+					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'rel');
+				} else if (in_array(@$path[$i+1]->type, array(ATW_VALUE, ATW_COMP))) {
+					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'att');
+				} else {
+					$total += $atwCatStore->propertyRating($firstCat, $path[$i]->keyword, 'all');
+				}
+			}
+		}
+		
+		$score += (float)$total/$n;
+		
+		return $score;
 		
 	}
 }
@@ -163,7 +206,7 @@ class ATWQueryNode {
 			
 			$child = new ATWQueryNode( $nextCurrent, $nextRemaining );
 			
-			if (array_intersect($child->current->types, $nextExpect)) {
+			if (array_intersect($child->current->types, $nextExpect) && ($child->children || !$nextRemaining)) {
 				$this->children[] = $child;
 			}
 
@@ -181,7 +224,8 @@ class ATWKeywordData {
 	public function __construct($keywords) {
 		global $atwKwStore, $atwComparators;
 		
-		$this->kwString = strtolower(implode(" ", $keywords));		
+		//$this->kwString = strtolower(implode(" ", $keywords));	
+		$this->kwString = implode(" ", $keywords);	
 		$this->types = array();
 		
 		// the order of these statements influences the order of interpretations, to a degree.
