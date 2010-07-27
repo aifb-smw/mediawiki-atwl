@@ -22,8 +22,8 @@ class ATWQueryTree {
 	public static $atwExpectTypes = array(
 		ATW_INIT	=> array(ATW_CAT, ATW_PAGE),
 		ATW_CAT		=> array(ATW_CAT, ATW_PROP),
-		ATW_COMP 	=> array(ATW_VALUE, ATW_NUM),
-		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_NUM, ATW_WILD, ATW_COMP, ATW_PROP),
+		ATW_COMP 	=> array(ATW_VALUE), // array(ATW_VALUE, ATW_NUM)
+		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_WILD, ATW_COMP, ATW_PROP), // also removed ATW_NUM here
 		ATW_OR 		=> array(ATW_PROP),
 		ATW_PAGE	=> array(ATW_PROP),
 		ATW_WILD	=> array(ATW_PROP, ATW_OR),
@@ -36,8 +36,9 @@ class ATWQueryTree {
 		$keywords = preg_split( "/\s+/", $this->queryString );		
 		$this->root = new ATWQueryNode( array(""), $keywords );
 		
-		$this->getPaths();
-		$this->sort();
+		$this->enumeratePaths();
+		$this->prune();
+		$this->rank();
 	}
 	
 	/**
@@ -51,53 +52,40 @@ class ATWQueryTree {
 			return "There were no valid interpretations for the query <em>{$this->queryString}</em>";
 		}
 		
-		$i = 0;
-		$m = "";
+		$count = 0;
+		$m = "<ul class='choices'>";
 		foreach ($this->paths as $path) {
-
-			$m .= "<p>Interpretation ".++$i." (score ".round($path[1],3)."): ";
+			$count++;
+			$query = SpecialATWL::getAskQuery($path[0]);
+			$result = SpecialATWL::getAskQueryResult($query);
+			$link = str_replace(array("Ask","?title") , array("AskTheWiki", "/Special:AskTheWiki?title"), $result['link']->getURL());
+			$m .= "<li><a href='$link'>";
+			$m .= "<tt>". str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
+			$m .= implode(" ", array_map(create_function('$q', 'return "?".$q->getHTMLText();'), $query->getExtraPrintouts()));
+			$m .= " </tt></a>(score ".round($path[1],3)."): ";
+			$m .= $result['content'];
+					
 			
-			//$m .= @SpecialATWL::getAskQueryResultHTML($intr);
-			
-			
-			$m .= "<ul>";
-			foreach ($path[0] as $kwObj) {
-				$t = $kwObj->type;
-				if ($t == ATW_INIT) continue;
-				$m .= "<li>{$kwObj->keyword}: ";
-
-				if ($t == ATW_PAGE) $m .= "page";
-				else if ($t == ATW_CAT) {
-					$m .= "category";
-				}
-				else if ($t == ATW_PROP) $m .= "property";
-				else if ($t == ATW_VALUE) $m .= "property value";
-				else if ($t == ATW_COMP) $m .= "comparator";
-				else if ($t == ATW_WILD) $m .= "wildcard";
-				else if ($t == ATW_NUM) $m .= "number";
-				else if ($t == ATW_OR) $m .= "OR (disjunction)";
-				$m .= "</li>";		
-			}
-			$m .= "</ul>";
-			
-			
-			$m .= "</p>";
+			$m .= "</li>";
 		}
-		return $m;
+		$m .= "</ul>";
+		
+		$intro = "<ul><li>Your search returned $count interpretations.</li><li>Choose the interpretation that fits your needs best by clicking on foo.</li><li>Note: You can add and remove properties in the next step.</li></ul>";
+		return $intro . $m;
 	}
 	
 	/**
 	 * returns the flattened trees as an array of paths (query interpretations)
 	 */
-	protected function getPaths() {
-		$this->paths = $this->flatten($this->root, array(ATW_INIT));
+	protected function enumeratePaths() {
+		$this->paths = $this->paths($this->root, array(ATW_INIT));
 	}
 	
 	/**
 	 * recursively gets an array of possible interpretations 
 	 * for a node and its descendants. respects $atwExpectTypes
 	 */
-	protected function flatten(&$node, $expectTypes) {
+	protected function paths(&$node, $expectTypes) {
 		//echo "<pre>"; print_r($node); echo "</pre>";
 		$ret = array();	
 		if (empty($node->children)) { 		// base case
@@ -110,7 +98,7 @@ class ATWQueryTree {
 		foreach ($node->current->types as &$type) {
 			foreach ($node->children as &$child) {
 				if ($a = array_intersect($child->current->types, ATWQueryTree::$atwExpectTypes[$type])) {
-					foreach ($this->flatten($child, $a) as $intr) {
+					foreach ($this->paths($child, $a) as $intr) {
 						if (in_array($intr[0]->type, ATWQueryTree::$atwExpectTypes[$type])) {
 							$ret[] = array_merge(array(new ATWKeyword($node->current->kwString, $type)), $intr);
 						}
@@ -123,7 +111,28 @@ class ATWQueryTree {
 		
 	}
 	
-	public function sort() {
+	/**
+	 * removes certain impossible interpretations.  Most of this type of functionality
+	 * is handled already when the paths are being found
+	 */
+	protected function prune() {
+		for ($i=0; $i<count($this->paths); $i++) {
+			$poMode = false; //printout mode
+			for ($j=0; $j<count($this->paths[$i]); $j++) {
+				$curType = $this->paths[$i][$j]->type;
+				$nextType = @$this->paths[$i][$j+1]->type;
+				
+				$poMode = $poMode || ($curType == ATW_PROP && (!$nextType || $nextType == ATW_PROP));
+				if ($poMode && $curType != ATW_PROP) {
+					unset($this->paths[$i]);
+					break;
+				}
+			}
+		}
+		
+	}
+	
+	protected function rank() {
 		$scored = array();
 		foreach ($this->paths as $path) {
 			$scored[] = array($path, $this->score($path));
@@ -138,12 +147,12 @@ class ATWQueryTree {
 	/**
 	 * returns an estimate of the likelihood that $path is a useful query interpretation
 	 */
-	public function score(&$path) {
+	protected function score(&$path) {
 		global $atwCatStore;
 		
 		$score = 0.0;
 		
-		// first, if there are multiple selected categories, get the concordance
+		// first, if there are multiple selected categories, get the concordance.
 		// the fact that we don't do anything similar in the case that a page, not a category,
 		// is the selected item gives a desirable bias to interpretations that have categories
 		
@@ -176,7 +185,7 @@ class ATWQueryTree {
 				}
 			}
 				
-			$score += pow($total/$n,2);
+			$score += @pow($total/$n,2);
 			
 		} else { 	// a page, not a category, is selected
 			$page = $path[0]->keyword;
@@ -261,13 +270,13 @@ class ATWKeywordData {
 		
 		if ( $atwKwStore->isCategory($this->kwString) )
 			$this->types[] = ATW_CAT;
-		
-		if ( $atwKwStore->isPage($this->kwString) ) 
-			$this->types[] = ATW_PAGE;
 			
 		if ( $atwKwStore->isProperty($this->kwString) )
 			$this->types[] = ATW_PROP;
-			
+		
+		if ( $atwKwStore->isPage($this->kwString) ) 
+			$this->types[] = ATW_PAGE;
+						
 		if ( in_array($this->kwString, $atwComparators) )
 			$this->types[] = ATW_COMP;
 			

@@ -95,6 +95,12 @@ class ATWKeywordStore {
 	public function isPropertyValue($string) {
 		// todo: this needs to account for strings with units in them
 		
+		if (is_numeric($string))
+			return true;
+			
+		// testing
+		return true;
+		
 		if (isset($this->values[$string]))
 			return $this->values[$string];
 		

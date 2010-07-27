@@ -7,7 +7,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 }
 
 $dir = dirname(__FILE__) . '/';
-$wgSpecialPages['ATWL'] = 'SpecialATWL';
+$wgSpecialPages['AskTheWiki'] = 'SpecialATWL';
 $wgAutoloadClasses['SpecialATWL'] = $dir . 'SpecialATWL.php';
 
 

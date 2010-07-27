@@ -13,31 +13,61 @@ define( 'ATW_INIT', 8 ); // represents the beginning of the query string
 class SpecialATWL extends SpecialPage {
 	
 	public function __construct() {
-		parent :: __construct('ATWL');
+		parent :: __construct('AskTheWiki');
 	}
 
-	public function execute($query = '') {
+	public function execute($p) {
 		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
 		global $atwKwStore, $atwCatStore, $atwComparators;
-		wfProfileIn('ATWL:execute');
 		
-		$queryString = $wgRequest->getText('q');
-		$spectitle = $this->getTitleFor("ATWL");
-		
-		$wgOut->setHTMLtitle("ATW Light: $queryString");
-		
-		$m = '<form method="get" action="'. $spectitle->escapeLocalURL() .'">';
-		$m .= '<input size="50" type="text" name="q" value="'.str_replace('"', '\"', $queryString).'" />';
-		$m .= '<input type="submit" value="Submit" />';
-		$m .= '</form>';
-		$wgOut->addHTML($m);
-		
+		//todo: move these somewhere else
 		$atwComparators = array("less than", "greater than", "<", ">", "<=", ">=", "not", "like");		
 		$atwKwStore = new ATWKeywordStore();		
 		$atwCatStore = new ATWCategoryStore();
 		
-		$qp = new ATWQueryTree( $queryString );
-		$wgOut->addHTML( $qp->testOutput() );
+		wfProfileIn('ATWL:execute');
+		
+		$wgOut->addStyle( '../extensions/SemanticMediaWiki/skins/SMW_custom.css' );
+		$wgOut->addStyle( '../extensions/atwl/extensions/atwl/ATW_main.css' );
+		$wgOut->addScript( '<script type="text/javascript" src="../extensions/SemanticMediaWiki/skins/SMW_sorttable.js"></script>');	
+			
+		$spectitle = $this->getTitleFor("AskTheWiki");
+		
+		$queryString = $wgRequest->getText('q');
+		$passed = $wgRequest->getText('x');
+		$format = $wgRequest->getText('format');
+		
+		$wgOut->setHTMLtitle("Ask The Wiki".($queryString?": interpretations for \"$queryString\"":""));
+		
+		if ($passed == '') {
+			// query input textbox form
+			$m = '<form method="get" action="'. $spectitle->escapeLocalURL() .'">';
+			$m .= '<input size="50" type="text" name="q" value="'.str_replace('"', '\"', $queryString).'" />';
+			$m .= '<input type="submit" value="Submit" />';
+			$m .= '</form>';
+			$wgOut->addHTML($m);
+			
+			if ($queryString == '') {
+				$wgOut->addHTML( "Step 1: enter keywords" );
+			} else {
+				$qp = new ATWQueryTree( $queryString );
+				$wgOut->addHTML( $qp->testOutput() ); 
+			}
+		} else {
+			$rawparams = SMWInfolink::decodeParameters( $passed, true );
+			
+			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
+			$params['format'] = $format ? $format : 'broadtable';
+			$params['limit'] = 20;
+			
+			$queryobj = SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
+			
+			$res = smwfGetStore()->getQueryResult( $queryobj );			
+			$printer = SMWQueryProcessor::getResultPrinter( $params['format'], SMWQueryProcessor::SPECIAL_PAGE );
+			$query_result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
+			$wgOut->addHTML($query_result);
+			
+		}
 
 		wfProfileOut('ATWL:execute');
 	}
@@ -56,24 +86,22 @@ class SpecialATWL extends SpecialPage {
 		$printouts = array();		
 		
 		for ($i = 0; $i<count($interpretation); $i++) {
-			$prevType = @$interpretation[$i-1];
-			$prevKeyword = @$interpretation[$i-1];
-			
+			$nextType = @$interpretation[$i+1]->type;		
+			$prevType = @$interpretation[$i-1]->type;	
+			$prevKeyword = @$interpretations[$i-1]->keyword;
 			$kw = $interpretation[$i];
 			
-			if ($prevType == ATW_PROP
-				&& !in_array($kw->type, array(ATW_VALUE, 
-				ATW_COMP, ATW_NUM)))
+			if ($interpretation[$i]->type == ATW_PROP && ($nextType == ATW_PROP || !$nextType) ) {
 				$printoutMode = true;			
+			}
 			
 			if ($kw->type == ATW_CAT) {
 				$queryString .= "[[Category:{$kw->keyword}]]";
 			} else if ($kw->type == ATW_PAGE) {
-				$queryString .= "[[{$kw->keyword}]]";
+				$queryString .= ($prevType == ATW_INIT ? "[[" : "") . "{$kw->keyword}]]";
 			} else if ($kw->type == ATW_PROP) {
-				if ($printoutMode) {
-					$printouts[] = "?{$kw->keyword}";
-				} else {
+				$printouts[] = "?{$kw->keyword}";
+				if (!$printoutMode) {
 					$queryString .= "[[{$kw->keyword}::";
 				}
 			} else if ($kw->type == ATW_COMP) {
@@ -92,32 +120,39 @@ class SpecialATWL extends SpecialPage {
 								? "*{$kw->keyword}*]]" : $kw->keyword."]]";								
 			} else if ($kw->type == ATW_WILD) {
 				$queryString .= "+]]";
-			} 
+			} else if ($kw->type == ATW_NUM) {
+				$queryString .= "{$kw->keyword}]]";
+			}
 		}
 		
-		$params['format'] = $format;
+		$rawparams = array_merge(array($queryString), $printouts);
 		
-		return SMWQueryProcessor::createQuery( $queryString, $params, SMWQueryProcessor::SPECIAL_PAGE , $format, $printouts );
+		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
+		$params['format'] = $format;
+		$params['limit'] = 5;
+		
+		return SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
 	}
 	
 	/**
 	 * takes an ordered array of ATWKeyword objects
 	 * and returns an Ask query string
 	 */
-	public function getAskQueryResultHTML($interpretation, $format = 'broadtable') {
-		$queryobj = $this->getAskQuery($interpretation, $format);
+	public function getAskQueryResult($queryobj, $format = 'broadtable', $params = array()) {
 		
 		$res = smwfGetStore()->getQueryResult( $queryobj );
 		
 		$printer = SMWQueryProcessor::getResultPrinter( $format, SMWQueryProcessor::SPECIAL_PAGE );
 		$query_result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
 		if ( is_array( $query_result ) ) {
-			$result .= $query_result[0];
+			$result = $query_result[0];
 		} else {
-			$result .= $query_result;
+			$result = $query_result;
 		}
 		
-		return $result;		
+		//$result .= $res->hasFurtherResults() ? "has further results" : "";
+		
+		return array('content' => $result, 'link' => $res->getQueryLink());		
 	}
 }
 
