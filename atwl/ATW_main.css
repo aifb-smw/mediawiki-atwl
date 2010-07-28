@@ -16,3 +16,29 @@ ul.choices li {
 	float: left;
 	width: 100%;
 }
+
+#options {
+	border: 2px solid #60A8AC;
+	margin: 10px;
+}
+
+#result {
+	margin: 10px;
+}
+
+#facets {
+	border: 2px solid #60A8AC;
+	width: 30%;
+	float: right;
+	margin:5px;
+}
+
+#format {
+	border: 2px solid #60A8AC;
+	width: 30%;
+	float: left;
+	margin:5px;
+}
+
+/*table, div { border: 1px solid black; }*/
+

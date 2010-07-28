@@ -65,7 +65,29 @@ class SpecialATWL extends SpecialPage {
 			$res = smwfGetStore()->getQueryResult( $queryobj );			
 			$printer = SMWQueryProcessor::getResultPrinter( $params['format'], SMWQueryProcessor::SPECIAL_PAGE );
 			$query_result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
-			$wgOut->addHTML($query_result);
+			
+			$formats = array_unique( array_merge( array_keys($smwgResultFormats), $srfgFormats ) );
+			
+			$formatSelector = "<form><label for='format' style='text-align:left; vertical-align:middle;'>Format: </label><select name='format'>".implode(array_map(create_function('$f','return "<option value=\'$f\'>$f</option>";'), $formats))."</select></form>";
+
+			$printoutMatches = array_map(create_function('$a', 'return $a->getLabel();'), $printouts);
+			preg_match_all("/\[\[Category\:(.+?)\]\]/", $querystring, $matches);
+			foreach ($matches[1] as $cat) {
+				$facets[$cat] = $atwCatStore->getFacets($cat,20);
+			}
+			$facetOutput = "";
+			foreach ($facets as $cat => $facetArray) {
+				$facetOutput .= "<p>$cat<ul>";
+				foreach ($facetArray as $property => $count) {
+					$facetOutput .= "<li><input type='checkbox' name='prop$property' ".(in_array($property, $printoutMatches) ? "checked":"").">$property</li>";
+				}
+				
+				$facetOutput .= "</ul></p>";
+			}
+			
+			$m = "<div id='container'><div id='options'><div id='format'>$formatSelector</div><div id='facets'>$facetOutput</div><div style='clear: both;'></div></div><div id='result'>$query_result</div></div>";
+			
+			$wgOut->addHTML($m);
 			
 		}
 
