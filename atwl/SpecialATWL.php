@@ -29,6 +29,7 @@ class SpecialATWL extends SpecialPage {
 		
 		$wgOut->addStyle( '../extensions/SemanticMediaWiki/skins/SMW_custom.css' );
 		$wgOut->addStyle( '../extensions/atwl/extensions/atwl/ATW_main.css' );
+		$wgOut->addScript( '<script type="text/javascript" src="../extensions/atwl/extensions/atwl/ATW_main.js"></script>' );
 		$wgOut->addScript( '<script type="text/javascript" src="../extensions/SemanticMediaWiki/skins/SMW_sorttable.js"></script>');	
 			
 		$spectitle = $this->getTitleFor("AskTheWiki");
@@ -51,47 +52,80 @@ class SpecialATWL extends SpecialPage {
 				$wgOut->addHTML( "Step 1: enter keywords" );
 			} else {
 				$qp = new ATWQueryTree( $queryString );
+				$wgOut->addHTML( "Step 2: choose interpretation" );
 				$wgOut->addHTML( $qp->testOutput() ); 
 			}
 		} else {
-			$rawparams = SMWInfolink::decodeParameters( $passed, true );
-			
-			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
-			$params['format'] = $format ? $format : 'broadtable';
-			$params['limit'] = 20;
-			
-			$queryobj = SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
-			
-			$res = smwfGetStore()->getQueryResult( $queryobj );			
-			$printer = SMWQueryProcessor::getResultPrinter( $params['format'], SMWQueryProcessor::SPECIAL_PAGE );
-			$query_result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
+			$result = $this->getResultOutput($passed, $format);
 			
 			$formats = array_unique( array_merge( array_keys($smwgResultFormats), $srfgFormats ) );
 			
-			$formatSelector = "<form><label for='format' style='text-align:left; vertical-align:middle;'>Format: </label><select name='format'>".implode(array_map(create_function('$f','return "<option value=\'$f\'>$f</option>";'), $formats))."</select></form>";
+			$formatSelector = "<form><label for='format' style='text-align:left; vertical-align:middle;'>Format: </label><select id='format' name='format' onchange='changeFormat(this);'>".implode(array_map(create_function('$f','return "<option value=\'$f\'>$f</option>";'), $formats))."</select></form>";
 
-			$printoutMatches = array_map(create_function('$a', 'return $a->getLabel();'), $printouts);
-			preg_match_all("/\[\[Category\:(.+?)\]\]/", $querystring, $matches);
+			$printoutMatches = array_unique(array_map(create_function('$a', 'return $a->getLabel();'), $result['printouts']));
+			unset($printoutMatches[0]);
+			
+			preg_match_all("/\[\[Category\:(.+?)\]\]/", $result['querystring'], $matches);
 			foreach ($matches[1] as $cat) {
-				$facets[$cat] = $atwCatStore->getFacets($cat,20);
+				$facets[$cat] = $atwCatStore->getFacets($cat,10);
 			}
 			$facetOutput = "";
 			foreach ($facets as $cat => $facetArray) {
-				$facetOutput .= "<p>$cat<ul>";
+				$facetOutput .= "<p>Category:".ucfirst($cat)."<ul>";
 				foreach ($facetArray as $property => $count) {
-					$facetOutput .= "<li><input type='checkbox' name='prop$property' ".(in_array($property, $printoutMatches) ? "checked":"").">$property</li>";
+					$facetOutput .= "<li><input type='checkbox' id='prop$property' ".(in_array($property, $printoutMatches) ? "checked":"")." onChange='toggleFacet(this);'>$property</li>";
 				}
 				
 				$facetOutput .= "</ul></p>";
 			}
 			
-			$m = "<div id='container'><div id='options'><div id='format'>$formatSelector</div><div id='facets'>$facetOutput</div><div style='clear: both;'></div></div><div id='result'>$query_result</div></div>";
+			$m = "<div id='container'><div id='options'><div id='format'>$formatSelector</div><div id='facets'>$facetOutput</div><div style='clear: both;'></div></div><div id='result'>{$result['result']}</div></div>";
+			
+			$wgOut->addScript("<script type='text/javascript'>var format = '{$result['params']['format']}'; var facets = ['".implode("','", $printoutMatches)."']; var passed = '{$passed}';</script>");
 			
 			$wgOut->addHTML($m);
 			
 		}
 
 		wfProfileOut('ATWL:execute');
+	}
+	
+	/**
+	 * these functions seriously need to be refactored
+	 */
+	public function ajaxGetResultOutput($passed, $format, $facets = '') {
+		$result = self::getResultOutput($passed, $format, $facets);
+		return $result['result'];
+	}
+	
+	/**
+	 * gets the HTML result for a query string as passed by the special page to itself
+	 * $facets is a string containing a comma-separated list of property names for use with AJAX.
+	 * Sets some class variables which are used in execute().
+	 */ 
+	public function getResultOutput($passed, $format, $facets = '') {
+		$withoutfacets = substr($passed, 0, strpos($passed, "/-3F")+1);
+		$passed = $withoutfacets ? $withoutfacets : $passed;
+		foreach (explode(",", $facets) as $f) {
+			$passed .= "/-3F$f";
+		}
+		
+		$rawparams = SMWInfolink::decodeParameters( $passed, true );
+			
+		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
+		$params['format'] = $format ? $format : 'broadtable';
+		$params['limit'] = 20;
+		
+		$queryobj = SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
+		
+		$res = smwfGetStore()->getQueryResult( $queryobj );			
+		$printer = SMWQueryProcessor::getResultPrinter( $params['format'], SMWQueryProcessor::SPECIAL_PAGE );
+		
+		$result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
+		
+		$result = "<p>View the <a href='".$res->getQueryLink()->getURL()."'>Special:Ask results page</a> for this query to see all results and directly edit the query.</p>" . $result;
+		
+		return array('result' => $result, 'querystring' => $querystring, 'params' => $params, 'printouts' => $printouts);
 	}
 	
 	/**

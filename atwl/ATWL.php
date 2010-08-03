@@ -12,7 +12,7 @@ $wgAutoloadClasses['SpecialATWL'] = $dir . 'SpecialATWL.php';
 
 
 function wfATWLSetup() {
-	global $wgAutoloadClasses, $wgHooks;
+	global $wgAutoloadClasses, $wgHooks, $wgAjaxExportList;
 	
 	$dir = dirname(__FILE__) . '/';
 	
@@ -23,6 +23,8 @@ function wfATWLSetup() {
 	$wgAutoloadClasses['ATWKeyword'] = $dir . 'ATWQueryTree.php';
 	$wgAutoloadClasses['ATWKeywordStore'] = $dir . 'ATWKeywordStore.php';
 	$wgAutoloadClasses['ATWCategoryStore'] = $dir . 'ATWCategoryStore.php';
+	
+	$wgAjaxExportList[] = 'SpecialATWL::ajaxGetResultOutput';
 	
 	
 }

@@ -33,6 +33,13 @@ ul.choices li {
 	margin:5px;
 }
 
+#facets ul {
+	list-style: none;
+}
+#facets ul li {
+	margin-left: -5px;
+}
+
 #format {
 	border: 2px solid #60A8AC;
 	width: 30%;
