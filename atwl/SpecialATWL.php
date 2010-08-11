@@ -138,8 +138,9 @@ class SpecialATWL extends SpecialPage {
 				$selectCount++;
 			} else if ($kw->type == ATW_PROP) {
 				$printouts[] = "?{$kw->keyword}";
-				if (!$printoutMode) {
-					$queryString .= "[[{$kw->keyword}::";
+				$queryString .= "[[{$kw->keyword}::";
+				if ($printoutMode) {
+					$queryString .= "+]]";
 				}
 			} else if ($kw->type == ATW_COMP) {
 				
@@ -163,7 +164,7 @@ class SpecialATWL extends SpecialPage {
 		}
 		
 		if ($selectCount == 0) {
-			$queryString = "[[Category:+]]" . $queryString;
+			$queryString = "[[Category:*]]" . $queryString;
 		}
 		
 		$rawparams = array_merge(array($queryString), $printouts);

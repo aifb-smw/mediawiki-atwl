@@ -3,9 +3,9 @@
  todo: 
   + add a facet overlay on Special:Ask
   
-  + add Concept support
+  x add Concept support
   + add "email professor"-type query support
-  + add subject-less query support (i.e. over all pages)
+  x add subject-less query support (i.e. over all pages)
   + improving ranking heuristic
   + improve interpretation selection appearance
 
@@ -174,8 +174,7 @@ class ATWQueryTree {
 		
 		usort($scored, create_function('$a,$b', 'if ($a[1] == $b[1]) return 0; else return $a[1] > $b[1] ? -1 : 1;'));
 		
-		$this->paths = array_map(create_function('$p', 'return $p[0];'),
-							$scored);
+		$this->paths = array_map(create_function('$p', 'return $p[0];'), $scored);
 
 	}
 	
