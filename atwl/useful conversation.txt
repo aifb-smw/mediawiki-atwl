@@ -1,0 +1,11 @@
+(12:39:10 AM) MichaelAWhite: If I want to select all pages in an Ask query, does [[Category:*]] work?  or does that only select pages that have categories?
+(12:41:20 AM) mackmoron11 left the room (quit: Ping timeout: 245 seconds).
+(01:00:48 AM) padde: MichaelAWhite: * surely won't work, maybe '+' - but yes, that will only match pages that are in at least one category
+(01:01:05 AM) padde: MichaelAWhite: why do you want to select 'all' pages?
+(01:02:21 AM) MichaelAWhite: I am writing an extension that interprets keyword queries as ask queries, and one type of keyword query you might want to make is "property1 property2 ..." without necessarily specifying a restriction on which pages to select
+(01:03:14 AM) padde: but then what's wrong with [[Property1::+]] [[Property2::+]]?
+(01:03:55 AM) MichaelAWhite: probably nothing, that is a good idea.  Although, perhaps the user wants to see pages that don't have all of those properties as well
+(01:04:26 AM) padde: MichaelAWhite: then it gets a bit harder, you have to use 'OR', and since there are no brackets in the #ask syntax, you have to repeat a lot of stuff
+(01:05:39 AM) padde: (if you additionally have 'AND' connections, that is)
+(01:05:59 AM) padde: maybe you can just go with [[Property1::+]] OR [[Property2::+]] OR [[Property3::+]] ...
+(01:07:03 AM) MichaelAWhite: that seems best

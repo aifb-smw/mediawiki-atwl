@@ -88,12 +88,32 @@ class ATWKeywordStore {
 		return $this->properties[$string];
 	}
 	
+	public function isConcept($string) {
+		if (isset($this->concepts[$string]))
+			return $this->concepts[$string];
+		
+		$smw_ids = $this->db->tableName('smw_ids');
+		$smw_conc2 = $this->db->tableName('smw_conc2');
+ 		
+ 		$query = "SELECT s.smw_id FROM $smw_ids s, $smw_conc2 c " .
+				 "WHERE s.smw_id = c.s_id ".
+					"AND s.smw_sortkey = '" . $this->db->strencode(ucfirst($string)) ."'";
+		
+		if ($res = $this->db->query($query)) {
+			$this->concepts[$string] = ($row = $this->db->fetchObject($res)) ? true : false;
+		}
+		
+		$this->db->freeResult($res);
+		return $this->concepts[$string];
+	}
+	
 	/**
 	 * returns whether $string is a valid property value
 	 * and stores result in $values
 	 */
 	public function isPropertyValue($string) {
 		// todo: this needs to account for strings with units in them
+		// we also might just want to make it always return true
 		
 		if (is_numeric($string))
 			return true;

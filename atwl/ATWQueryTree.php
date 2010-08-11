@@ -1,4 +1,33 @@
 <?php
+/*
+ todo: 
+  + add a facet overlay on Special:Ask
+  
+  + add Concept support
+  + add "email professor"-type query support
+  + add subject-less query support (i.e. over all pages)
+  + improving ranking heuristic
+  + improve interpretation selection appearance
+
+ in ATWKeywordStore:
+  + use Lucene for category, property names
+  + implement category->property table
+    - hooks
+  
+  in SpecialATWL:
+  + consider possible entry points for any intelligent format selection / property mapping algorithm
+  * 
+  * 
+  * 
+
+should a query like "homepage" translate to
+[[Category:*]] ?Homepage
+or
+[[Category:*]] [[Homepage::+]] ? Homepage
+?
+
+*/
+
 
 /**
  *  A query interpretation consists of an array of ATWKeyword objects
@@ -20,8 +49,9 @@ class ATWQueryTree {
 	
 	// a keyword of type key must be followed by one that has a type in value	
 	public static $atwExpectTypes = array(
-		ATW_INIT	=> array(ATW_CAT, ATW_PAGE),
-		ATW_CAT		=> array(ATW_CAT, ATW_PROP),
+		ATW_INIT	=> array(ATW_CAT, ATW_CNCPT, ATW_PAGE, ATW_PROP),
+		ATW_CAT		=> array(ATW_CAT, ATW_CNCPT, ATW_PROP),
+		ATW_CNCPT	=> array(ATW_CAT, ATW_CNCPT, ATW_PROP),
 		ATW_COMP 	=> array(ATW_VALUE), // array(ATW_VALUE, ATW_NUM)
 		ATW_PROP 	=> array(ATW_PAGE, ATW_VALUE, ATW_WILD, ATW_COMP, ATW_PROP), // also removed ATW_NUM here
 		ATW_OR 		=> array(ATW_PROP),
@@ -44,11 +74,11 @@ class ATWQueryTree {
 	/**
 	 * prints a debug output of the structure
 	 */
-	public function testOutput() {
+	public function outputInterpretations() {
 		global $atwCatStore;
 		// return "<pre>".print_r($this, true)."</pre>";
 		
-		if (count($this->paths[0]) == 0) {
+		if (count($this->paths) == 0) {
 			return "There were no valid interpretations for the query <em>{$this->queryString}</em>";
 		}
 		
@@ -56,17 +86,21 @@ class ATWQueryTree {
 		$m = "<ul class='choices'>";
 		foreach ($this->paths as $path) {
 			$count++;
-			$query = SpecialATWL::getAskQuery($path[0]);
+			$query = SpecialATWL::getAskQuery($path);
 			$result = SpecialATWL::getAskQueryResult($query);
-			$link = str_replace(array("Ask","?title") , array("AskTheWiki", "/Special:AskTheWiki?title"), $result['link']->getURL());
-			$m .= "<li><a href='$link'>";
-			$m .= "<tt>". str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
-			$m .= implode(" ", array_map(create_function('$q', 'return "?".$q->getHTMLText();'), $query->getExtraPrintouts()));
-			$m .= " </tt></a>(score ".round($path[1],3)."): ";
-			$m .= $result['content'];
-					
+			//$link = str_replace(array("Ask","?title") , array("AskTheWiki", "/Special:AskTheWiki?title"), $result['link']->getURL());
 			
-			$m .= "</li>";
+			/*
+			preg_match("/x\=([^&]*)/", $result['link']->getURL(), $matches);
+			$rawparams = SMWInfoLink::decodeParameters($matches[1]);
+			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts );
+			print_r(array($querystring, $printouts, $params));
+			*/
+			$link = $result['link']->getURL() . "&intro=This is a sentence that we could use to give people instructions for using faceted browsing.&eq=no&format=ul";
+			$m .= "<li><a href='$link'><tt>";
+			$m .= str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
+			$m .= implode(" ", array_map(create_function('$q', 'return "?".$q->getHTMLText();'), $query->getExtraPrintouts()));
+			$m .= " </tt></a>{$result['content']}</li>";
 		}
 		$m .= "</ul>";
 		
@@ -140,7 +174,8 @@ class ATWQueryTree {
 		
 		usort($scored, create_function('$a,$b', 'if ($a[1] == $b[1]) return 0; else return $a[1] > $b[1] ? -1 : 1;'));
 		
-		$this->paths = $scored;
+		$this->paths = array_map(create_function('$p', 'return $p[0];'),
+							$scored);
 
 	}
 	
@@ -270,6 +305,9 @@ class ATWKeywordData {
 		
 		if ( $atwKwStore->isCategory($this->kwString) )
 			$this->types[] = ATW_CAT;
+			
+		if ( $atwKwStore->isConcept($this->kwString) )
+			$this->types[] = ATW_CNCPT;
 			
 		if ( $atwKwStore->isProperty($this->kwString) )
 			$this->types[] = ATW_PROP;
