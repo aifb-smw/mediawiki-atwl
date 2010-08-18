@@ -51,6 +51,7 @@ class SpecialATWL extends SpecialPage {
 		$wgOut->addHTML($m);
 		
 		if ($queryString) {
+			$this->log("query: $queryString");
 			$qp = new ATWQueryTree( $queryString );
 			$wgOut->addHTML( "Step 2: choose interpretation" );
 			$wgOut->addHTML( $qp->outputInterpretations() ); 			
@@ -153,6 +154,18 @@ class SpecialATWL extends SpecialPage {
 		//$result .= $res->hasFurtherResults() ? "has further results" : "";
 		
 		return array('content' => $result, 'link' => $res->getQueryLink() );		
+	}
+	
+	function log($string) {
+		global $atwEnableLogging, $atwIP;
+		
+		if (!$atwEnableLogging) return;
+		
+		//opens the file in append mode
+		if ($fh = fopen($atwIP.'atw.log', 'a')) {
+			@fwrite($fh, date("Y-m-d H:m:s")." - ".session_id(). $string."\n");
+			fclose($fh);	
+		}	
 	}
 }
 

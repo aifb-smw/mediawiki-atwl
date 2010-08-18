@@ -9,6 +9,8 @@ $(document).ready(function() {
 	urlParams = getUrlParameters();
 	facets = new Array();
 	
+	//todo: this isn't working for when params are passed via x
+	
 	//extract properties from printouts parameter
 	if (urlParams["po"] != null) {
 		urlParams["po"].replace(/%3F(.+)%0D%0A/gi, function(m,facet) {

@@ -96,7 +96,7 @@ class ATWQueryTree {
 			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts );
 			print_r(array($querystring, $printouts, $params));
 			*/
-			$link = $result['link']->getURL().'&showFacets=true&eq=no';
+			$link = $result['link']->getURL().'&showFacets=true&eq=no&choice='.$count.'&atwQueryString='.urlencode($this->queryString);
 			$m .= "<li><a href='$link'><tt>";
 			$m .= str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
 			$m .= implode(" ", array_map(function ($q){ return '?'.$q->getHTMLText();}, $query->getExtraPrintouts()));

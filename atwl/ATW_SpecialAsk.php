@@ -5,6 +5,14 @@ class FacetedAskPage extends SMWAskPage {
 		parent::execute($p);
 		
 		global $wgUseAjax, $wgOut, $wgRequest, $atwgShowFacets;
+		
+		global $atwCatStore;
+		$atwCatStore = new ATWCategoryStore();
+		
+		if ($wgRequest->getCheck('atwQueryString')) {
+			SpecialATWL::log('choice '.$wgRequest->getText('choice').', '.$this->m_querystring . implode(
+				array_map(function($po) {return " ?".$po->getLabel();}, $this->m_printouts)) .' ('.$wgRequest->getText('atwQueryString').')');
+		}
 				
 		if (!$atwgShowFacets)
 			return;
@@ -14,6 +22,9 @@ class FacetedAskPage extends SMWAskPage {
 		// extract category names from processed querystring
 		preg_match_all("/\[\[Category:(.+?)\]\]/i", $this->m_querystring, $matches);
 		$cats = $matches[1];
+		foreach ($cats as $c) {
+			$atwCatStore->fetchAll($c);
+		}
 		
 		$poLabels = array_map(
 			function($po) {	return $po->getLabel(); },
@@ -42,7 +53,7 @@ class FacetedAskPage extends SMWAskPage {
 		}
 		
 		//include jQuery UI for draggable facets box
-		$wgOut->addScript( '<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>' );
+		//$wgOut->addScript( '<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>' );
 		
 		//todo: make this not depend on file_get_contents (some hosts disable it)
 		$wgOut->addScript( '<script type="text/javascript">'.file_get_contents($atwIP."ATW_facets.js").'</script>' );

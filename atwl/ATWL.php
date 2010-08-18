@@ -4,6 +4,8 @@ if( !defined( 'MEDIAWIKI' ) ) {
 	die("Not an entry point.\n");
 }
 
+$atwEnableLogging = true;
+
 $atwIP = dirname(__FILE__) . '/';
 
 $wgExtensionFunctions[] = 'wfATWLSetup';

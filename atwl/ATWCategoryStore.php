@@ -69,12 +69,12 @@ class ATWCategoryStore {
 	/**
 	 * for use when calling from AJAX / results in general
 	 */
-	public function getFacets($categoryname, $n = 10) {
-		if (isset($this->store[$categoryname])) {
-			return array_slice($this->store[$categoryname]['all'], 0, $n);
+	public function getFacets($categoryname, $offset=0, $limit= 10) {
+		if (isset($this->store[$categoryname]) && count($this->store[$categoryname]) >= $offset + $limit) {
+			return array_slice($this->store[$categoryname]['all'], $offset, $limit);
 		} else {
-			$facets = self::fetchAll($categoryname, $n);
-			return array_slice($facets['all'], 0, $n);			
+			$facets = self::fetchAll($categoryname, $limit);
+			return array_slice($facets['all'], $offset, $limit);			
 		}		
 	}
 	
@@ -109,7 +109,7 @@ class ATWCategoryStore {
 		return (float)pow((float)count($intersection)/20.0,2.0);		
 	}
 	
-	public function getFacetsHTML($cats, $selectedProps=array()) {
+	public function getFacetsHTML($cats, $selectedProps=array(), $offset=0, $limit=10) {
 		$catStore = new ATWCategoryStore();
 		//return json_encode($catStore->getFacets($cats));
 		$m = '<table><tr>';
@@ -117,7 +117,7 @@ class ATWCategoryStore {
 		foreach ($cats as $cat) {
 			$m .= '<td>';
 			//$m .= '<h5>'.ucfirst($cat).'</h5>';
-			if ($facets = $catStore->getFacets($cat)) {
+			if ($facets = $catStore->getFacets($cat, $offset, $limit)) {
 				$m .= '<table class="smwtable" id="facetstable'.$i++.'"><tr><th></th><th>Property of '.ucfirst($cat).'</th></tr>';
 				foreach ($facets as $prop => $count) {
 					$fprop = addslashes(str_replace(" ", "_", $prop));
