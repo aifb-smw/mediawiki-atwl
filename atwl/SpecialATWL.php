@@ -20,13 +20,18 @@ class SpecialATWL extends SpecialPage {
 	public function execute($p) {
 		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
 		global $atwKwStore, $atwCatStore, $atwComparators;
+		wfProfileIn('ATWL:execute');
 		
-		//todo: move these somewhere else
-		$atwComparators = array("less than", "greater than", "<", ">", "<=", ">=", "not", "like");		
 		$atwKwStore = new ATWKeywordStore();		
 		$atwCatStore = new ATWCategoryStore();
 		
-		wfProfileIn('ATWL:execute');
+		//todo: move these somewhere else
+		$atwComparatorsEn = array('lt' => 'less than',
+								  'gt' => 'greater than',
+								  'not' => 'not',
+								  'like' => 'like' );
+								  
+		$atwComparators = array_merge( array("<", ">", "<=", ">="), $atwComparatorsEn);		
 		
 		$wgOut->addStyle( '../extensions/SemanticMediaWiki/skins/SMW_custom.css' );
 		$wgOut->addStyle( '../extensions/atwl/extensions/atwl/ATW_main.css' );
@@ -36,72 +41,25 @@ class SpecialATWL extends SpecialPage {
 		$spectitle = $this->getTitleFor("AskTheWiki");
 		
 		$queryString = $wgRequest->getText('q');
-		//$passed = $wgRequest->getText('x');
-		//$format = $wgRequest->getText('format');		
-		//$params = $wgRequest->getArray('params');
 		
 		$wgOut->setHTMLtitle("Ask The Wiki".($queryString?": interpretations for \"$queryString\"":""));
 
 		// query input textbox form
-		$m = '<form method="get" action="'. $spectitle->escapeLocalURL() .'">';
-		$m .= '<input size="50" type="text" name="q" value="'.str_replace('"', '\"', $queryString).'" />';
-		$m .= '<input type="submit" value="Submit" />';
-		$m .= '</form>';
+		$m = '<form method="get" action="'. $spectitle->escapeLocalURL() .'">' .
+		     '<input size="50" type="text" name="q" value="'.str_replace('"', '\"', $queryString).'" />' .
+		     '<input type="submit" value="Submit" /> </form>';
 		$wgOut->addHTML($m);
 		
-		if ($queryString == '') {
-			$wgOut->addHTML( "Step 1: enter keywords" );
-		} else {
+		if ($queryString) {
 			$qp = new ATWQueryTree( $queryString );
 			$wgOut->addHTML( "Step 2: choose interpretation" );
-			$wgOut->addHTML( $qp->outputInterpretations() ); 
+			$wgOut->addHTML( $qp->outputInterpretations() ); 			
+		} else {			
+			$wgOut->addHTML( "Step 1: enter keywords" );
 		}
 
 		wfProfileOut('ATWL:execute');
 	}
-	
-	/**
-	 * these functions seriously need to be refactored
-	 */
-	/*
-	public function ajaxGetResultOutput($passed, $format, $facets = '') {
-		$result = self::getResultOutput($passed, $format, $facets);
-		return $result['result'];
-	}
-	*/
-	
-	/**
-	 * gets the HTML result for a query string as passed by the special page to itself
-	 * $facets is a string containing a comma-separated list of property names for use with AJAX.
-	 * Sets some class variables which are used in execute().
-	 */ 
-	
-	/*
-	public function getResultOutput($passed, $format, $facets = '') {
-		$withoutfacets = substr($passed, 0, strpos($passed, "/-3F")+1);
-		$passed = $withoutfacets ? $withoutfacets : $passed;
-		foreach (explode(",", $facets) as $f) {
-			$passed .= "/-3F$f";
-		}
-		
-		$rawparams = SMWInfolink::decodeParameters( $passed, true );
-			
-		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
-		$params['format'] = $format ? $format : 'broadtable';
-		$params['limit'] = 20;
-		
-		$queryobj = SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
-		
-		$res = smwfGetStore()->getQueryResult( $queryobj );			
-		$printer = SMWQueryProcessor::getResultPrinter( $params['format'], SMWQueryProcessor::SPECIAL_PAGE );
-		
-		$result = $printer->getResult( $res, $params, SMW_OUTPUT_HTML );
-		
-		$result = "<p>View the <a href='".$res->getQueryLink()->getURL()."'>Special:Ask results page</a> for this query to see all results and directly edit the query.</p>" . $result;
-		
-		return array('result' => $result, 'querystring' => $querystring, 'params' => $params, 'printouts' => $printouts);
-	} 
-	*/
 	
 	/**
 	 * takes $interpretation, an ordered array of ATWKeyword objects
@@ -109,6 +67,7 @@ class SpecialATWL extends SpecialPage {
 	 * returns a query object based.
 	 */
 	public function getAskQuery($interpretation, $format = 'broadtable', $params = null ) {
+		global $atwComparators;
 		
 		// set to true once we encounter a property not followed by a value or comparator		
 		$printoutMode = false; 
@@ -127,34 +86,33 @@ class SpecialATWL extends SpecialPage {
 				$printoutMode = true;			
 			}
 			
+			if ($kw->type == ATW_CAT || $kw->type == ATW_CNCPT || $kw->type == ATW_PAGE) {
+				$selectCount++;
+			}
+			
 			if ($kw->type == ATW_CAT) {
 				$queryString .= "[[Category:{$kw->keyword}]]";
-				$selectCount++;
 			} else if ($kw->type == ATW_CNCPT) {
 				$queryString .= "[[Concept:{$kw->keyword}]]";
-				$selectCount++;
 			} else if ($kw->type == ATW_PAGE) {
 				$queryString .= ($prevType == ATW_INIT ? "[[" : "") . "{$kw->keyword}]]";
-				$selectCount++;
 			} else if ($kw->type == ATW_PROP) {
 				$printouts[] = "?{$kw->keyword}";
-				$queryString .= "[[{$kw->keyword}::";
-				if ($printoutMode) {
-					$queryString .= "+]]";
-				}
-			} else if ($kw->type == ATW_COMP) {
-				
-				if ( in_array($kw->keyword, array("less than", "<", "<=")) )
+				$queryString .= "[[{$kw->keyword}::" . ($printoutMode?"+]]":"");
+			} else if ($kw->type == ATW_COMP) {		
+										
+				if ( in_array($kw->keyword, array("<", "<=", $atwComparators['lt'])) ) {
 					$queryString .= "<";
-				else if ( in_array($kw->keyword, array("greater than", ">", ">=")) )
+				} else if ( in_array($kw->keyword, array(">", ">=", $atwComparators['gt'])) ) {
 					$queryString .= ">";
-				else if ( $kw->keyword == "not" )
+				} else if ( $kw->keyword == $atwComparators['not'] ) {
 					$queryString .= "!";
-				else if ( $kw->keyword == "like" )
+				} else if ( $kw->keyword == $atwComparators['like'] ) {
 					$queryString .= "~";		
-								
+				}
+												
 			} else if ($kw->type == ATW_VALUE) {
-				$queryString .= ($prevType == ATW_COMP && $prevKeyword == "like")
+				$queryString .= ($prevType == ATW_COMP && $prevKeyword == $atwComparators['like'])
 								? "*{$kw->keyword}*]]" : $kw->keyword."]]";								
 			} else if ($kw->type == ATW_WILD) {
 				$queryString .= "+]]";
@@ -194,7 +152,7 @@ class SpecialATWL extends SpecialPage {
 		
 		//$result .= $res->hasFurtherResults() ? "has further results" : "";
 		
-		return array('content' => $result, 'link' => $res->getQueryLink());		
+		return array('content' => $result, 'link' => $res->getQueryLink() );		
 	}
 }
 

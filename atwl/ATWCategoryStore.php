@@ -41,7 +41,7 @@ class ATWCategoryStore {
 		if ($limit) $sql .= " LIMIT $limit";
 		
 		$res = $this->db->query($sql);
-		$atts = $rels = array();
+		$atts = $rels = $all = array();
 		while ($row = $this->db->fetchObject($res)) {
 			$atts[$row->smw_sortkey] = $row->count;
 			$all[$row->smw_sortkey] = $row->count;
@@ -73,7 +73,7 @@ class ATWCategoryStore {
 		if (isset($this->store[$categoryname])) {
 			return array_slice($this->store[$categoryname]['all'], 0, $n);
 		} else {
-			$facets = $this->fetchAll($categoryname, $n);
+			$facets = self::fetchAll($categoryname, $n);
 			return array_slice($facets['all'], 0, $n);			
 		}		
 	}
@@ -104,13 +104,35 @@ class ATWCategoryStore {
 	 * of items, i.e. they would be likely to appear adjacently in an Ask query
 	 */
 	public function overlap($cats) {
-		$facets = array_map(array(&$this, "_facets"), $cats);
+		$facets = array_map(array(&$this, "getFacets"), $cats);
 		$intersection = call_user_func_array('array_intersect', $facets);
 		return (float)pow((float)count($intersection)/20.0,2.0);		
 	}
 	
-	public function _facets($cat) {
-		return $this->getFacets($cat, 20);
+	public function getFacetsHTML($cats, $selectedProps=array()) {
+		$catStore = new ATWCategoryStore();
+		//return json_encode($catStore->getFacets($cats));
+		$m = '<table><tr>';
+		$i = 0;
+		foreach ($cats as $cat) {
+			$m .= '<td>';
+			//$m .= '<h5>'.ucfirst($cat).'</h5>';
+			if ($facets = $catStore->getFacets($cat)) {
+				$m .= '<table class="smwtable" id="facetstable'.$i++.'"><tr><th></th><th>Property of '.ucfirst($cat).'</th></tr>';
+				foreach ($facets as $prop => $count) {
+					$fprop = addslashes(str_replace(" ", "_", $prop));
+					$checked = in_array($prop, $selectedProps)?"checked":"";
+					$m .= "<tr><td><input type='checkbox' id='po-$fprop' onChange='toggleFacet(\"$fprop\");' $checked /></td><td>$prop</td></tr>\n";
+				}
+				$m .= '</table>';
+			} else {
+				$m .= '<p>This category doesn\'t have any facets.</p>';
+			}
+			
+			$m .= '</td>';			
+		}		
+		$m .= '</tr></table>';
+		
+		return $m;
 	}
-	
 }

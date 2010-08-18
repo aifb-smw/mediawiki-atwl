@@ -96,10 +96,10 @@ class ATWQueryTree {
 			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts );
 			print_r(array($querystring, $printouts, $params));
 			*/
-			$link = $result['link']->getURL() . "&intro=This is a sentence that we could use to give people instructions for using faceted browsing.&eq=no&format=ul";
+			$link = $result['link']->getURL().'&showFacets=true&eq=no';
 			$m .= "<li><a href='$link'><tt>";
 			$m .= str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
-			$m .= implode(" ", array_map(create_function('$q', 'return "?".$q->getHTMLText();'), $query->getExtraPrintouts()));
+			$m .= implode(" ", array_map(function ($q){ return '?'.$q->getHTMLText();}, $query->getExtraPrintouts()));
 			$m .= " </tt></a>{$result['content']}</li>";
 		}
 		$m .= "</ul>";

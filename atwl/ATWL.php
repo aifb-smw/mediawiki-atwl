@@ -1,30 +1,33 @@
 <?php
 
-$wgExtensionFunctions[] = 'wfATWLSetup';
-
 if( !defined( 'MEDIAWIKI' ) ) {
 	die("Not an entry point.\n");
 }
 
-$dir = dirname(__FILE__) . '/';
-$wgSpecialPages['AskTheWiki'] = 'SpecialATWL';
-$wgAutoloadClasses['SpecialATWL'] = $dir . 'SpecialATWL.php';
+$atwIP = dirname(__FILE__) . '/';
 
+$wgExtensionFunctions[] = 'wfATWLSetup';
+$wgAutoloadClasses['SpecialATWL'] = $atwIP. 'SpecialATWL.php';
+$wgAutoloadClasses['FacetedAskPage'] = $atwIP . 'ATW_SpecialAsk.php'; // extends Special:Ask
+$wgSpecialPages['AskTheWiki'] = 'SpecialATWL';
+$wgSpecialPages['Ask'] = 'FacetedAskPage'; 
+
+if (!isset($atwgShowFacets)) {
+	$atwgShowFacets = true;
+}
 
 function wfATWLSetup() {
 	global $wgAutoloadClasses, $wgHooks, $wgAjaxExportList;
-	
-	$dir = dirname(__FILE__) . '/';
-	
+	global $atwIP;	
 
-	$wgAutoloadClasses['ATWQueryTree'] = $dir . 'ATWQueryTree.php';
-	$wgAutoloadClasses['ATWQueryNode'] = $dir . 'ATWQueryTree.php';
-	$wgAutoloadClasses['ATWKeywordData'] = $dir . 'ATWQueryTree.php';
-	$wgAutoloadClasses['ATWKeyword'] = $dir . 'ATWQueryTree.php';
-	$wgAutoloadClasses['ATWKeywordStore'] = $dir . 'ATWKeywordStore.php';
-	$wgAutoloadClasses['ATWCategoryStore'] = $dir . 'ATWCategoryStore.php';
+	$wgAutoloadClasses['ATWQueryTree'] = $atwIP . 'ATWQueryTree.php';
+	$wgAutoloadClasses['ATWQueryNode'] = $atwIP . 'ATWQueryTree.php';
+	$wgAutoloadClasses['ATWKeywordData'] = $atwIP . 'ATWQueryTree.php';
+	$wgAutoloadClasses['ATWKeyword'] = $atwIP . 'ATWQueryTree.php';
+	$wgAutoloadClasses['ATWKeywordStore'] = $atwIP . 'ATWKeywordStore.php';
+	$wgAutoloadClasses['ATWCategoryStore'] = $atwIP . 'ATWCategoryStore.php';
 	
-	$wgAjaxExportList[] = 'SpecialATWL::ajaxGetResultOutput';
+	$wgAjaxExportList[] = 'ATWCategoryStore::ajaxGetFacets';
 	
 	
 }
