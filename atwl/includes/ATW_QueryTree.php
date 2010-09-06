@@ -15,7 +15,7 @@
     - hooks
   
   in SpecialATWL:
-  + consider possible entry points for any intelligent format selection / property mapping algorithm
+  x consider possible entry points for any intelligent format selection / property mapping algorithm
   * 
   * 
   * 
@@ -23,7 +23,7 @@
 should a query like "homepage" translate to
 [[Category:*]] ?Homepage
 or
-[[Category:*]] [[Homepage::+]] ? Homepage
+[[Category:*]] [[Homepage::+]] ? Homepage 		[chose this option]
 ?
 
 */
@@ -41,7 +41,8 @@ class ATWKeyword {
 
 /**
  * takes the keyword string, creates an ATWQueryNode tree,
- * flattens the tree as valid possible interpretationsprovides the ability to order interpretations by likelihood of
+ * flattens the tree as valid possible interpretations
+ * provides the ability to order interpretations by likelihood of
  * being correct.
  */
 class ATWQueryTree {
@@ -85,22 +86,29 @@ class ATWQueryTree {
 		$count = 0;
 		$m = "<ul class='choices'>";
 		foreach ($this->paths as $path) {
-			$count++;
+
 			$query = SpecialATWL::getAskQuery($path);
-			$result = SpecialATWL::getAskQueryResult($query);
-			//$link = str_replace(array("Ask","?title") , array("AskTheWiki", "/Special:AskTheWiki?title"), $result['link']->getURL());
+			$mainlabel = $query['mainlabel'];
 			
-			/*
-			preg_match("/x\=([^&]*)/", $result['link']->getURL(), $matches);
-			$rawparams = SMWInfoLink::decodeParameters($matches[1]);
-			SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts );
-			print_r(array($querystring, $printouts, $params));
-			*/
-			$link = $result['link']->getURL().'&showFacets=true&eq=no&choice='.$count.'&atwQueryString='.urlencode($this->queryString);
-			$m .= "<li><a href='$link'><tt>";
+			$query = $query['result'];
+			$result = SpecialATWL::getAskQueryResult($query);
+			$errorString = $result['errorstring'];
+			$link = $result['link'];
+			$result = $result['content'];
+			
+			if ($errorString != '' || $result == '') {
+				continue;
+			}
+			
+			$count++;
+			$link = $link->getURL()."&showFacets=true&eq=no&choice=$count&atwQueryString={$this->queryString}&format=atwtable&mainlabel=$mainlabel";
+			$m .= "<li><a href='$link'>";
+			/*<tt>";
 			$m .= str_replace("]][[", "]] [[", $query->getQueryString()) . "  ";
 			$m .= implode(" ", array_map(function ($q){ return '?'.$q->getHTMLText();}, $query->getExtraPrintouts()));
-			$m .= " </tt></a>{$result['content']}</li>";
+			$m .= " </tt>
+			*/
+			$m .= "{$result}</a></li>";
 		}
 		$m .= "</ul>";
 		
@@ -150,6 +158,7 @@ class ATWQueryTree {
 	 * is handled already when the paths are being found
 	 */
 	protected function prune() {
+		/*
 		for ($i=0; $i<count($this->paths); $i++) {
 			$poMode = false; //printout mode
 			for ($j=0; $j<count($this->paths[$i]); $j++) {
@@ -163,6 +172,7 @@ class ATWQueryTree {
 				}
 			}
 		}
+		*/
 		
 	}
 	
@@ -172,7 +182,16 @@ class ATWQueryTree {
 			$scored[] = array($path, $this->score($path));
 		}
 		
-		usort($scored, create_function('$a,$b', 'if ($a[1] == $b[1]) return 0; else return $a[1] > $b[1] ? -1 : 1;'));
+		usort($scored, 
+			function($a, $b) {
+				if ($a[1] == $b[1]) 
+					return 0;
+				else
+					return $a[1] > $b[1] ? -1 : 1;
+			}
+		);
+		
+		//create_function('$a,$b', 'if ($a[1] == $b[1]) return 0; else return $a[1] > $b[1] ? -1 : 1;'));
 		
 		$this->paths = array_map(create_function('$p', 'return $p[0];'), $scored);
 

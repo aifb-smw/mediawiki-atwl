@@ -19,8 +19,10 @@ class SpecialATWL extends SpecialPage {
 
 	public function execute($p) {
 		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
-		global $atwKwStore, $atwCatStore, $atwComparators;
+		global $atwKwStore, $atwCatStore, $atwComparators, $smwgIP;
 		wfProfileIn('ATWL:execute');
+		
+		wfLoadExtensionMessages('AskTheWiki');
 		
 		$atwKwStore = new ATWKeywordStore();		
 		$atwCatStore = new ATWCategoryStore();
@@ -34,9 +36,10 @@ class SpecialATWL extends SpecialPage {
 		$atwComparators = array_merge( array("<", ">", "<=", ">="), $atwComparatorsEn);		
 		
 		$wgOut->addStyle( '../extensions/SemanticMediaWiki/skins/SMW_custom.css' );
-		$wgOut->addStyle( '../extensions/atwl/extensions/atwl/ATW_main.css' );
-		//$wgOut->addScript( '<script type="text/javascript" src="../extensions/atwl/extensions/atwl/ATW_main.js"></script>' );
-		$wgOut->addScript( '<script type="text/javascript" src="../extensions/SemanticMediaWiki/skins/SMW_sorttable.js"></script>');	
+		$wgOut->addStyle( '../extensions/atwl/jscss/ATW_main.css' );
+		//$wgOut->addScript( '<script type="text/javascript" src="../extensions/atwl/ATW_main.js"></script>' );
+		$wgOut->addScriptFile( $smwgIP .'skins/SMW_sorttable.js' );	
+		
 			
 		$spectitle = $this->getTitleFor("AskTheWiki");
 		
@@ -53,10 +56,21 @@ class SpecialATWL extends SpecialPage {
 		if ($queryString) {
 			$this->log("query: $queryString");
 			$qp = new ATWQueryTree( $queryString );
-			$wgOut->addHTML( "Step 2: choose interpretation" );
+			$wgOut->addHTML( wfMsg('atwl_chooseinterpretation') );
 			$wgOut->addHTML( $qp->outputInterpretations() ); 			
 		} else {			
-			$wgOut->addHTML( "Step 1: enter keywords" );
+			global $atwgExampleQueries;
+			
+			$wgOut->addHTML( wfMsg('atwl_enterkeywords') );
+			
+			if ($atwgExampleQueries) {
+				$wgOut->addHTML( '<p>' . wfMsg('atwl_forexample') );
+				
+				$wgOut->addHTML( '<ul>' . 
+					implode(
+						array_map(function($q) {return "<li><a href='?q=$q'>$q</a></li>"; },
+						$atwgExampleQueries)));
+			}
 		}
 
 		wfProfileOut('ATWL:execute');
@@ -67,24 +81,39 @@ class SpecialATWL extends SpecialPage {
 	 * and $params and $format, which are passed directly to SMWQueryProcessor::createQuery.
 	 * returns a query object based.
 	 */
-	public function getAskQuery($interpretation, $format = 'broadtable', $params = null ) {
-		global $atwComparators;
+	public function getAskQuery($interpretation, $format = 'atwtable', $params = null ) {
+		global $atwgPrintoutsMustExist, $atwgPrintoutConstrainedProperties, $atwComparators;
 		
-		// set to true once we encounter a property not followed by a value or comparator		
+		global $wgContLang, $smwgContLang;
+		
+		$smwNs = $smwgContLang->getNamespaces();
+		// $propNs = $smwNs[SMW_NS_PROPERTY];  //not needed
+		$conceptNs = $smwNs[SMW_NS_CONCEPT];
+		$catNs = $wgContLang->getNsText ( NS_CATEGORY );
+		
+		// set to true once we encounter a property not followed by a value or comparator
+		// but we set it back if needed, to support queries like "tool license gpl status"		
 		$printoutMode = false; 
 		
 		$queryString = "";
 		$printouts = array();	
 		$selectCount = 0;	
+		$cats = array();
+		$concepts = array();
+		$attributes = array(); // used for mainlabel
+		$mainlabel = "";
 		
+		$currentAttribute = "";
 		for ($i = 0; $i<count($interpretation); $i++) {
 			$nextType = @$interpretation[$i+1]->type;		
 			$prevType = @$interpretation[$i-1]->type;	
 			$prevKeyword = @$interpretations[$i-1]->keyword;
 			$kw = $interpretation[$i];
 			
-			if ($interpretation[$i]->type == ATW_PROP && ($nextType == ATW_PROP || !$nextType) ) {
+			if ($kw->type == ATW_PROP && ($nextType == ATW_PROP || !$nextType) ) {
 				$printoutMode = true;			
+			} else {
+				$printoutMode = false;
 			}
 			
 			if ($kw->type == ATW_CAT || $kw->type == ATW_CNCPT || $kw->type == ATW_PAGE) {
@@ -92,55 +121,88 @@ class SpecialATWL extends SpecialPage {
 			}
 			
 			if ($kw->type == ATW_CAT) {
-				$queryString .= "[[Category:{$kw->keyword}]]";
+				$queryString .= "[[$catNs:{$kw->keyword}]]";
+				$cats[] = ucfirst($kw->keyword);
 			} else if ($kw->type == ATW_CNCPT) {
-				$queryString .= "[[Concept:{$kw->keyword}]]";
+				$queryString .= "[[$conceptNs:{$kw->keyword}]]";
+				$concepts[] = ucfirst($kw->keyword);
 			} else if ($kw->type == ATW_PAGE) {
 				$queryString .= ($prevType == ATW_INIT ? "[[" : "") . "{$kw->keyword}]]";
+				if ($prevType == ATW_PROP) {
+					$currentAttribute .= $kw->keyword;
+				}
 			} else if ($kw->type == ATW_PROP) {
-				$printouts[] = "?{$kw->keyword}";
-				$queryString .= "[[{$kw->keyword}::" . ($printoutMode?"+]]":"");
+				if ($atwgPrintoutConstrainedProperties || $printoutMode || $nextType == ATW_COMP) {
+					$printouts[] = "?{$kw->keyword}";
+				}
+				if ($nextType == ATW_VALUE || $nextType == ATW_NUM || $nextType == ATW_WILD || 
+					$nextType == ATW_COMP || $nextType == ATW_PAGE) {
+					$currentAttribute .= ucfirst($kw->keyword) . ': ';
+				}
+				if ($atwgPrintoutsMustExist) {
+					$queryString .= "[[{$kw->keyword}::" . ($printoutMode?"+]]":"");
+				}
 			} else if ($kw->type == ATW_COMP) {		
 										
 				if ( in_array($kw->keyword, array("<", "<=", $atwComparators['lt'])) ) {
 					$queryString .= "<";
+					$currentAttribute .= '<';
 				} else if ( in_array($kw->keyword, array(">", ">=", $atwComparators['gt'])) ) {
 					$queryString .= ">";
+					$currentAttribute .= '>';
 				} else if ( $kw->keyword == $atwComparators['not'] ) {
 					$queryString .= "!";
+					$currentAttribute .= '!';
 				} else if ( $kw->keyword == $atwComparators['like'] ) {
-					$queryString .= "~";		
+					$queryString .= "~";	
+					$currentAttribute .= '~';	
 				}
 												
 			} else if ($kw->type == ATW_VALUE) {
 				$queryString .= ($prevType == ATW_COMP && $prevKeyword == $atwComparators['like'])
-								? "*{$kw->keyword}*]]" : $kw->keyword."]]";								
+								? "*{$kw->keyword}*]]" : $kw->keyword."]]";	
+				$currentAttribute .= ' '.$kw->keyword;							
 			} else if ($kw->type == ATW_WILD) {
 				$queryString .= "+]]";
+				$currentAttribute .= '*'; // todo: change to 'All'?
 			} else if ($kw->type == ATW_NUM) {
 				$queryString .= "{$kw->keyword}]]";
+				$currentAttribute .= $kw->keyword;
+			}
+			
+			if (($kw->type == ATW_VALUE || $kw->type == ATW_NUM || $kw->type == ATW_WILD || 
+				($kw->type == ATW_PAGE && $prevType != ATW_PAGE && $prevType != ATW_CAT && $prevType != ATW_INIT))
+				&& ($nextType == ATW_PROP || !$nextType)) {
+				$attributes[] = $currentAttribute;
+				$currentAttribute = "";
 			}
 		}
 		
 		if ($selectCount == 0) {
-			$queryString = "[[Category:*]]" . $queryString;
+			$queryString = "[[$catNs:*]]" . $queryString;
+			//array_unshift($cats, "*");
 		}
+
+		$mainlabel = implode('; ', array_merge($concepts, $cats)) . 
+			($attributes ? '<ul><li>' . implode('</li><li>', $attributes) .'</li></ul>' : '');
+		
 		
 		$rawparams = array_merge(array($queryString), $printouts);
+		$rawparams['mainlabel'] = $mainlabel;
+		
+		
 		
 		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
 		$params['format'] = $format;
 		$params['limit'] = 5;
 		
-		return SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts );
+		return array(
+			'result' => SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts ),
+			'mainlabel' => $mainlabel
+		);
 	}
 	
-	/**
-	 * takes an ordered array of ATWKeyword objects
-	 * and returns an Ask query string
-	 */
-	public function getAskQueryResult($queryobj, $format = 'broadtable', $params = array()) {
-		
+	public function getAskQueryResult($queryobj, $format = 'atwtable', $params = array()) {
 		$res = smwfGetStore()->getQueryResult( $queryobj );
 		
 		$printer = SMWQueryProcessor::getResultPrinter( $format, SMWQueryProcessor::SPECIAL_PAGE );
@@ -151,22 +213,21 @@ class SpecialATWL extends SpecialPage {
 			$result = $query_result;
 		}
 		
+		$errorString = $printer->getErrorString( $res );
 		//$result .= $res->hasFurtherResults() ? "has further results" : "";
 		
-		return array('content' => $result, 'link' => $res->getQueryLink() );		
+		return array('errorstring' => $errorString, 'content' => $result, 'link' => $res->getQueryLink() );		
 	}
 	
-	function log($string) {
-		global $atwEnableLogging, $atwIP;
+	public function log($string) {
+		//todo: switch to wfDebugLog();
+		global $atwgEnableLogging;
 		
-		if (!$atwEnableLogging) return;
-		
-		//opens the file in append mode
-		if ($fh = fopen($atwIP.'atw.log', 'a')) {
-			@fwrite($fh, date("Y-m-d H:m:s")." - ".session_id(). $string."\n");
-			fclose($fh);	
-		}	
+		if ($atwgEnableLogging) {
+			wfDebugLog( 'AskTheWiki', $string );
+		}
 	}
+	
 }
 
 

@@ -119,7 +119,7 @@ class ATWKeywordStore {
 			return true;
 			
 		// testing
-		return true;
+		//return true;
 		
 		if (isset($this->values[$string]))
 			return $this->values[$string];

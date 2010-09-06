@@ -114,11 +114,16 @@ class ATWCategoryStore {
 		//return json_encode($catStore->getFacets($cats));
 		$m = '<table><tr>';
 		$i = 0;
+		
+		
 		foreach ($cats as $cat) {
 			$m .= '<td>';
 			//$m .= '<h5>'.ucfirst($cat).'</h5>';
 			if ($facets = $catStore->getFacets($cat, $offset, $limit)) {
-				$m .= '<table class="smwtable" id="facetstable'.$i++.'"><tr><th></th><th>Property of '.ucfirst($cat).'</th></tr>';
+				$m .= '<table class="smwtable" id="facetstable'.$i++.'"><tr><th></th><th>'.wfMsg('atwl_askfacets_property').'</th></tr>';
+				
+				
+				
 				foreach ($facets as $prop => $count) {
 					$fprop = addslashes(str_replace(" ", "_", $prop));
 					$checked = in_array($prop, $selectedProps)?"checked":"";
