@@ -69,9 +69,9 @@ class FacetedAskPage extends SMWAskPage {
 	 * includes the jQuery , and ATW_facets.js, and ATW_Ask.css
 	 */
 	function addScripts() {
-		global $wgOut, $wgVersion, $atwIP, $smwgJQueryIncluded, $smwgScriptPath, $atwgScriptPath;
+		global $wgOut, $wgVersion, $atwIP, $smwgJQueryIncluded, $smwgScriptPath, $wgScriptPath;
 		
-		$wgOut->addStyle( '../extensions/SemanticFacetBrowser/jscss/ATW_Ask.css' );		
+		$wgOut->addStyle( $wgScriptPath . '/extensions/SemanticFacetBrowser/jscss/ATW_Ask.css' );		
 		
 		//include jQuery
 		if ( !$smwgJQueryIncluded ) {
@@ -88,7 +88,7 @@ class FacetedAskPage extends SMWAskPage {
 		//include jQuery UI for draggable facets box
 		//$wgOut->addScript( '<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>' );
 		
-		$wgOut->addScriptFile( '/wiki/extensions/SemanticFacetBrowser/jscss/ATW_facets.js' );
+		$wgOut->addScriptFile( $wgScriptPath . '/extensions/SemanticFacetBrowser/jscss/ATW_facets.js' );
 	}
 	
 	public function getAjaxResult($p) {

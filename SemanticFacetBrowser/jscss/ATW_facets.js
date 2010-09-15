@@ -93,6 +93,7 @@ function updateTable() {
 			setupEvents();
 			//jQuery(".smwtable").addClass('sorttable');  // doesn't work
 			window.location.href = "#";  // somewhat makes browser history buttons work
+			smw_makeSortable(document.getElementById("querytable0"));
 		});		
 	} else {
 		var paramsString = '';
