@@ -19,7 +19,7 @@ class SKSSpecialPage extends SpecialPage {
 
 	public function execute($p) {
 		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
-		global $atwKwStore, $atwCatStore, $atwComparators, $smwgIP;
+		global $atwKwStore, $atwCatStore, $atwComparators, $smwgIP, $smwgScriptPath, $wgScriptPath;
 		wfProfileIn('ATWL:execute');
 		
 		wfLoadExtensionMessages('SemanticKeywordSearch');
@@ -35,13 +35,13 @@ class SKSSpecialPage extends SpecialPage {
 								  
 		$atwComparators = array_merge( array("<", ">", "<=", ">="), $atwComparatorsEn);		
 		
-		$wgOut->addStyle( '../extensions/SemanticMediaWiki/skins/SMW_custom.css' );
-		$wgOut->addStyle( '../extensions/SemanticKeywordSearch/css/ATW_main.css' );
+		$wgOut->addStyle( $smwgScriptPath . '/skins/SMW_custom.css' );
+		$wgOut->addStyle( $wgScriptPath . '/extensions/SemanticKeywordSearch/css/ATW_main.css' );
 		//$wgOut->addScript( '<script type="text/javascript" src="../extensions/atwl/ATW_main.js"></script>' );
-		$wgOut->addScriptFile( $smwgIP .'skins/SMW_sorttable.js' );	
+		$wgOut->addScriptFile( $smwgScriptPath . '/skins/SMW_sorttable.js' );	
 		
 			
-		$spectitle = $this->getTitleFor("Semantic keyword search");
+		$spectitle = $this->getTitleFor("KeywordSearch");
 		
 		$queryString = $wgRequest->getText('q');
 		
@@ -56,15 +56,15 @@ class SKSSpecialPage extends SpecialPage {
 		if ($queryString) {
 			$this->log("query: $queryString");
 			$qp = new SKSQueryTree( $queryString );
-			$wgOut->addHTML( wfMsg('atwl_chooseinterpretation') );
+			$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
 			$wgOut->addHTML( $qp->outputInterpretations() ); 			
 		} else {			
 			global $sksgExampleQueries;
 			
-			$wgOut->addHTML( wfMsg('atwl_enterkeywords') );
+			$wgOut->addHTML( wfMsg('sks_enterkeywords') );
 			
 			if ($sksgExampleQueries) {
-				$wgOut->addHTML( '<p>' . wfMsg('atwl_forexample') );
+				$wgOut->addHTML( '<p>' . wfMsg('sks_forexample') );
 				
 				$wgOut->addHTML( '<ul>' . 
 					implode(
@@ -183,9 +183,13 @@ class SKSSpecialPage extends SpecialPage {
 			//array_unshift($cats, "*");
 		}
 
-		$mainlabel = implode('; ', array_merge($concepts, $cats)) . 
-			($attributes ? '<ul><li>' . implode('</li><li>', $attributes) .'</li></ul>' : '');
+		//$mainlabel = implode('; ', array_merge($concepts, $cats)) . 
+		//	($attributes ? '<ul><li>' . implode('</li><li>', $attributes) .'</li></ul>' : '');
 		
+		$mainlabel = implode('; ', array_merge($concepts, $cats));
+		foreach ($attributes as $a) {
+			$mainlabel .= '<br/>  <b>•</b> ' . $a;
+		}
 		
 		$rawparams = array_merge(array($queryString), $printouts);
 		$rawparams['mainlabel'] = $mainlabel;
