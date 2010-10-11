@@ -6,12 +6,14 @@ if( !defined( 'MEDIAWIKI' ) ) {
 
 $dir = dirname(__FILE__) . '/';
 
-$wgExtensionCredits['other'][] = array(
-	'name' => 'Semantic Category-Property Map',
-	'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]'), 
-	'url' => '', 
-	'descriptionmsg' => 'atwl_atwldescription'
-);
+if ( !defined( 'ASKTHEWIKI' ) ) {
+	$wgExtensionCredits['other'][] = array(
+		'name' => 'Semantic Category-Property Map',
+		'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]'), 
+		'url' => '', 
+		'descriptionmsg' => 'atwl_atwldescription'
+	);
+}
 
 $wgAutoloadClasses['CPMCategoryStore'] = $dir . 'CPM_CategoryStore.php';
 

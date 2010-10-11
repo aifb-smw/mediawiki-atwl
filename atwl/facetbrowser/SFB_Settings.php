@@ -1,6 +1,6 @@
 <?php
 
-$sfbgScriptPath = $sfbgIP . 'jscss/';
+//$sfbgScriptPath = $sfbgIP . 'jscss/';
 
 // show facets on Special:Ask when the user clicks from Special:AskTheWiki
 $atwgShowFacets = true;

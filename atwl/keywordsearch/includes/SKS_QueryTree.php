@@ -99,7 +99,11 @@ class SKSQueryTree {
 			
 			$result = preg_replace_callback("/\<tr\>(.+?)\<\/th\>/si",
 				create_function('$m',
-					'return "<tr>$m[1]<a href=\"'.$link.'\"><img style=\"float:right;\" src=\"'.$wgScriptPath.'/extensions/SemanticKeywordSearch/magnifier.png\"></a></th>";'
+					'return "<tr>$m[1]<a href=\"'.$link.'\">'.
+					'<img style=\"float:right;\" '.
+						'src=\"'.$wgScriptPath.'/extensions/'. 
+						(defined('ASKTHEWIKI') ? 'atwl/keywordsearch' : 'SemanticKeywordSearch').
+						'/magnifier.png\"></a></th>";'
 				),
 				$result
 			);
