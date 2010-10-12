@@ -5,6 +5,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 }
 
 $sksgIP = dirname(__FILE__) . '/';
+$sksgScriptPath = $atwgScriptPath . '/keywordsearch';
 require_once( $sksgIP . 'SKS_Settings.php' ); // sets some defaults
 
 // extension configuration options
@@ -20,7 +21,7 @@ $wgExtensionFunctions[] = 'wfSKSSetup';
 
 function wfSKSSetup() {
 	global $wgAutoloadClasses, $wgSpecialPages, $wgAjaxExportList, $wgDebugLogGroups;
-	global $smwgResultFormats, $sksgIP;
+	global $smwgResultFormats, $sksgIP;	
 	
 	$wgAutoloadClasses['SKSQueryTree']     		= $sksgIP . 'includes/SKS_QueryTree.php';
 	$wgAutoloadClasses['SKSQueryNode']     		= $sksgIP . 'includes/SKS_QueryTree.php';
@@ -38,3 +39,8 @@ function wfSKSSetup() {
 	
 	// todo: add AJAX logging function for clicking on result here
 }
+
+// this is apparently needed to load the $sksgExpectTypes global.  Otherwise things fail.
+// we could switch it back to a static member variable but that would make less sense.
+require_once($sksgIP . 'includes/SKS_QueryTree.php');
+

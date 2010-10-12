@@ -18,8 +18,7 @@ class SKSKeywordStore {
 	}	
 	
 	/**
-	 * returns whether $string is a valid page title
-	 * and stores result in $pages
+	 * returns whether $string is a valid page title and stores result in $pages
 	 */
 	public function isPage($string) {
 		if (isset($this->pages[$string]))
@@ -43,8 +42,7 @@ class SKSKeywordStore {
 	}
 	
 	/**
-	 * returns whether $string is a valid category title
-	 * and stores result in $categories
+	 * returns whether $string is a valid category title and stores result in $categories
 	 */	
 	public function isCategory($string) {
 		if (isset($this->categories[$string]))
@@ -67,8 +65,7 @@ class SKSKeywordStore {
 	}
 	
 	/**
-	 * returns whether $string is a valid property name
-	 * and stores result in $properties
+	 * returns whether $string is a valid property name and stores result in $properties
 	 */
 	public function isProperty($string) {
 		if (isset($this->properties[$string]))
@@ -88,6 +85,9 @@ class SKSKeywordStore {
 		return $this->properties[$string];
 	}
 	
+	/**
+	 * returns whether $string is a valid concept title and stores result in $concepts
+	 */	
 	public function isConcept($string) {
 		if (isset($this->concepts[$string]))
 			return $this->concepts[$string];
@@ -108,8 +108,7 @@ class SKSKeywordStore {
 	}
 	
 	/**
-	 * returns whether $string is a valid property value
-	 * and stores result in $values
+	 * returns whether $string is a valid property value and stores result in $values
 	 */
 	public function isPropertyValue($string) {
 		// todo: this needs to account for strings with units in them
@@ -117,9 +116,6 @@ class SKSKeywordStore {
 		
 		if (is_numeric($string))
 			return true;
-			
-		// testing
-		//return true;
 		
 		if (isset($this->values[$string]))
 			return $this->values[$string];

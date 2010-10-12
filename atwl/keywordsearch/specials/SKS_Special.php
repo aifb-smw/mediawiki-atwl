@@ -1,16 +1,5 @@
 <?php
 
-define( 'ATW_CAT',   0 ); // category - [[Category:X]]
-define( 'ATW_PAGE',  1 ); // page - [[X]]
-define( 'ATW_PROP',  2 ); // property - [[X:Value]]
-define( 'ATW_VALUE', 3 ); // value - [[Property:X]]
-define( 'ATW_COMP',  4 ); // comparator - [[Property:[<>!~]Value]]
-define( 'ATW_WILD',  5 ); // wildcard - [[Property:*]]
-define( 'ATW_NUM',   6 ); // number (may be useful for use with comparators) - [[Property:<X]]
-define( 'ATW_OR',    7 ); // for disjunctions, i.e. [[Property:X]] OR [[Property:Y]]
-define( 'ATW_CNCPT', 8 ); // concept - [[Concept:X]]
-define( 'ATW_INIT',  9 ); // represents the beginning of the query string
-
 class SKSSpecialPage extends SpecialPage {
 	
 	public function __construct() {
@@ -18,8 +7,9 @@ class SKSSpecialPage extends SpecialPage {
 	}
 
 	public function execute($p) {
-		global $wgOut, $wgRequest, $wgJsMimeType, $smwgResultFormats, $srfgFormats;
+		global $wgOut, $wgRequest, $smwgResultFormats, $srfgFormats;
 		global $atwKwStore, $atwCatStore, $atwComparators, $smwgIP, $smwgScriptPath, $wgScriptPath;
+		global $sksgScriptPath;
 		wfProfileIn('ATWL:execute');
 		
 		wfLoadExtensionMessages('SemanticKeywordSearch');
@@ -36,10 +26,8 @@ class SKSSpecialPage extends SpecialPage {
 		$atwComparators = array_merge( array("<", ">", "<=", ">="), $atwComparatorsEn);		
 		
 		$wgOut->addStyle( $smwgScriptPath . '/skins/SMW_custom.css' );
-		$wgOut->addStyle( $wgScriptPath . '/extensions/SemanticKeywordSearch/css/ATW_main.css' );
-		//$wgOut->addScript( '<script type="text/javascript" src="../extensions/atwl/ATW_main.js"></script>' );
-		$wgOut->addScriptFile( $smwgScriptPath . '/skins/SMW_sorttable.js' );	
-		
+		$wgOut->addStyle( $sksgScriptPath . '/css/ATW_main.css' );
+		$wgOut->addScriptFile( $smwgScriptPath . '/skins/SMW_sorttable.js' );			
 			
 		$spectitle = $this->getTitleFor("KeywordSearch");
 		
@@ -57,7 +45,7 @@ class SKSSpecialPage extends SpecialPage {
 			$this->log("query: $queryString");
 			$qp = new SKSQueryTree( $queryString );
 			$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
-			$wgOut->addHTML( $qp->outputInterpretations() ); 			
+			$wgOut->addHTML( $this->outputInterpretations($qp->paths) ); 			
 		} else {			
 			global $sksgExampleQueries;
 			
@@ -67,9 +55,11 @@ class SKSSpecialPage extends SpecialPage {
 				$wgOut->addHTML( '<p>' . wfMsg('sks_forexample') );
 				
 				$wgOut->addHTML( '<ul>' . 
-					implode(
-						array_map(function($q) {return "<li><a href='?q=$q'>$q</a></li>"; },
-						$sksgExampleQueries)));
+					implode(array_map(
+						create_function('$q', 'return "<li><a href=\'?q=$q\'>$q</a></li>";'),
+						$sksgExampleQueries
+					))
+				);
 			}
 		}
 
@@ -180,11 +170,7 @@ class SKSSpecialPage extends SpecialPage {
 		
 		if ($selectCount == 0) {
 			$queryString = "[[$catNs:*]]" . $queryString;
-			//array_unshift($cats, "*");
 		}
-
-		//$mainlabel = implode('; ', array_merge($concepts, $cats)) . 
-		//	($attributes ? '<ul><li>' . implode('</li><li>', $attributes) .'</li></ul>' : '');
 		
 		$mainlabel = implode('; ', array_merge($concepts, $cats));
 		foreach ($attributes as $a) {
@@ -192,9 +178,7 @@ class SKSSpecialPage extends SpecialPage {
 		}
 		
 		$rawparams = array_merge(array($queryString), $printouts);
-		$rawparams['mainlabel'] = $mainlabel;
-		
-		
+		$rawparams['mainlabel'] = $mainlabel;		
 		
 		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
 		$params['format'] = $format;
@@ -218,13 +202,61 @@ class SKSSpecialPage extends SpecialPage {
 		}
 		
 		$errorString = $printer->getErrorString( $res );
-		//$result .= $res->hasFurtherResults() ? "has further results" : "";
 		
 		return array('errorstring' => $errorString, 'content' => $result, 'link' => $res->getQueryLink() );		
 	}
 	
+	/**
+	 * prints a debug output of the structure
+	 */
+	public function outputInterpretations($paths) {
+		global $atwCatStore, $wgScriptPath;
+		
+		if (count($paths) == 0) {
+			return wfMsg('sks_no_valid_interpretations', $this->queryString);
+		}
+		
+		$count = 0;
+		$m = "<ul class='choices'>";
+		foreach ($paths as $path) {
+			$query = $this->getAskQuery($path);
+			$mainlabel = $query['mainlabel'];
+			
+			$query = $query['result'];
+			$result = $this->getAskQueryResult($query);
+			$errorString = $result['errorstring'];
+			$link = $result['link']->getURL()."&eq=no&format=skstable&mainlabel=$mainlabel";
+			$result = $result['content'];			
+			
+			$result = preg_replace_callback("/\<tr\>(.+?)\<\/th\>/si",
+				create_function('$m',
+					'return "<tr>$m[1]<a href=\"'.$link.'\">'.
+					'<img style=\"float:right;\" '.
+						'src=\"'.$wgScriptPath.'/extensions/'. 
+						(defined('ASKTHEWIKI') ? 'atwl/keywordsearch' : 'SemanticKeywordSearch').
+						'/magnifier.png\"></a></th>";'
+				),
+				$result
+			);
+			
+			if ($errorString || !$result) {
+				continue;
+			}
+			
+			$count++;
+			$m .= "<li>{$result}</a></li>";
+		}
+		$m .= "</ul>";
+		
+		$intro = '<ul><li>'.
+			wfMsg('sks_n_interpretations_' .($count==1 ? 'singular' : 'plural'), $count).
+			'</li><li>' . wfMsg('sks_choose_the_interpretation') . '</li><li>'.
+			wfMsg('sks_addremove_intr').'</li></ul>';
+		return $intro . $m;
+	}
+	
+	
 	public function log($string) {
-		//todo: switch to wfDebugLog();
 		global $sksgEnableLogging;
 		
 		if ($sksgEnableLogging) {

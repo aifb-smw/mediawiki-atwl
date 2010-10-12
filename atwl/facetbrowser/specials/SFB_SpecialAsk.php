@@ -47,19 +47,22 @@ class FacetedAskPage extends SMWAskPage {
 		}
 		*/
 		
+		$wgOut->addHTML('<div id="facetbox"><div style="float: right;">'.
+						'<div id="facetsbutton" width="50px" height="100px">Show facets</div>'.
+						'<div id="facettable">'.$this->getFacetsTableHTML($facets).'</div></div></div>');					
 		$this->addScripts();
-		
-		$wgOut->addHTML('<div id="facetbox"><div style="float: right;"><div id="facetsbutton" width="50px" height="100px">Show facets</div><div id="facettable">'.$this->getFacetsTableHTML($facets).'</div></div></div>');
-		
-
-		
 	}
 	
 	function getFacetsTableHTML(array &$facets, $height = '300px') {
-		$m = '<div style="overflow: scroll; overflow-x: hidden; height: '.$height.';"><table class="smwtable" id="facetstable"><tr><th></th><th>'.wfMsg('atwl_askfacets_property').'</th><th>'.wfMsg('sfb_occurrences').'</th></tr>';
+		$m = '<div style="overflow: scroll; overflow-x: hidden; height: '.$height.';">'.
+			 '<table class="smwtable" id="facetstable"><tr><th></th><th>'.
+			 wfMsg('atwl_askfacets_property').'</th><th>'.wfMsg('sfb_occurrences').'</th></tr>';
 
 		foreach ($facets as $f) {
-			$m .= "<tr><td><input type='checkbox' id='po-{$f['key']}' onChange=\"toggleFacet('{$f['key']}')\" ".($f['checked']?"checked":"")."></td><td>{$f['name']}</td><td><span class='smwsortkey'>{$f['count']}</span>{$f['count']}</td></tr>\n";
+			$m .= "<tr><td><input type='checkbox' id='po-{$f['key']}' onChange=".
+				  "\"toggleFacet('{$f['key']}')\" ".($f['checked']?"checked":"").">".
+				  "</td><td>{$f['name']}</td><td><span class='smwsortkey'>{$f['count']}".
+				  "</span>{$f['count']}</td></tr>\n";
 		}
 		
 		return $m . '</table></div>';
@@ -69,9 +72,7 @@ class FacetedAskPage extends SMWAskPage {
 	 * includes the jQuery , and ATW_facets.js, and ATW_Ask.css
 	 */
 	function addScripts() {
-		global $wgOut, $wgVersion, $atwIP, $smwgJQueryIncluded, $smwgScriptPath, $wgScriptPath, $sfbgScriptPath;
-		
-		$wgOut->addStyle( $sfbgScriptPath . '/ATW_Ask.css' );	
+		global $wgOut, $wgVersion, $smwgJQueryIncluded, $smwgScriptPath, $sfbgScriptPath;
 		
 		//include jQuery
 		if ( !$smwgJQueryIncluded ) {
@@ -88,12 +89,12 @@ class FacetedAskPage extends SMWAskPage {
 		//include jQuery UI for draggable facets box
 		//$wgOut->addScript( '<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>' );
 		
-		$wgOut->addScriptFile( $sfbgScriptPath . '/ATW_facets.js' );
+		$wgOut->addScriptFile( $sfbgScriptPath . '/ATW_facets.js' );		
+		$wgOut->addStyle( $sfbgScriptPath . '/ATW_Ask.css' );	
 	}
 	
 	public function getAjaxResult($p) {
-		global $wgOut, $wgRequest;
-		//echo $wgRequest->getText('po');
+		global $wgOut;
 		parent::execute($p);
 		$wgOut->disable();
 		echo $wgOut->getHTML();

@@ -17,4 +17,4 @@ $sksgPrintoutsMustExist = true;
 // if this is true, then a keyword intrepreted as [[property::value]] adds a ?Property statement
 $sksgPrintoutConstrainedProperties = true;
 
-$sksgScriptPath = $sksgIP . 'css/';
+//$sksgScriptPath = $sksgIP . 'css/';

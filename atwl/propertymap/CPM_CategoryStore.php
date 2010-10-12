@@ -1,6 +1,5 @@
 <?php
 
-
 /**
  * provides access to information about what properties pages of a category have.
  * this is used for ordering query interpretations and for displaying facets.
@@ -106,6 +105,13 @@ class CPMCategoryStore {
 		}		
 	}
 	
+	public function fetchAllPage($pagename) {
+		
+	}
+	
+	public function fetchAllMultiplePages($pagenames) {
+	}
+	
 	/**
 	 * returns the percentage of pages in $category that have $property
 	 * with a value as $type.  $type can be 'rel' (pages), 'att' (values), or 'all' (both)
@@ -120,7 +126,6 @@ class CPMCategoryStore {
 			$count = $num;
 			break;
 		}
-		//$count = reset($data[$type]);
 		
 		$s = isset($data[$type][$property]) ? (float)$data[$type][$property] : (float)0;
 		$c = (float)$count;
@@ -136,38 +141,4 @@ class CPMCategoryStore {
 		$intersection = call_user_func_array('array_intersect', $facets);
 		return (float)pow((float)count($intersection)/20.0,2.0);		
 	}
-	
-	/*
-	public function getFacetsHTML($cats, $selectedProps=array(), $offset=0, $limit=10) {
-		$catStore = new CPMCategoryStore();
-		//return json_encode($catStore->getFacets($cats));
-		$m = '<table><tr>';
-		$i = 0;
-		
-		
-		foreach ($cats as $cat) {
-			$m .= '<td>';
-			//$m .= '<h5>'.ucfirst($cat).'</h5>';
-			if ($facets = $catStore->getFacets($cat, $offset, $limit)) {
-				$m .= '<table class="smwtable" id="facetstable'.$i++.'"><tr><th></th><th>'.wfMsg('atwl_askfacets_property').'</th></tr>';
-				
-				
-				
-				foreach ($facets as $prop => $count) {
-					$fprop = addslashes(str_replace(" ", "_", $prop));
-					$checked = in_array($prop, $selectedProps)?"checked":"";
-					$m .= "<tr><td><input type='checkbox' id='po-$fprop' onChange='toggleFacet(\"$fprop\");' $checked /></td><td>$prop</td></tr>\n";
-				}
-				$m .= '</table>';
-			} else {
-				$m .= '<p>This category doesn\'t have any facets.</p>';
-			}
-			
-			$m .= '</td>';			
-		}		
-		$m .= '</tr></table>';
-		
-		return $m;
-	}
-	*/
 }
