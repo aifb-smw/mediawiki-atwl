@@ -42,8 +42,7 @@ class SKSKeywordData {
 	
 	public function __construct($keywords) {
 		global $atwKwStore, $atwComparators;
-		
-		//$this->kwString = strtolower(implode(" ", $keywords));	
+
 		$this->kwString = implode(" ", $keywords);	
 		$this->types = array();
 		

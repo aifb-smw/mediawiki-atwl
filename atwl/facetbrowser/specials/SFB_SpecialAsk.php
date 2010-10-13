@@ -8,6 +8,17 @@ class FacetedAskPage extends SMWAskPage {
 	
 	function execute( $p ) {
 		global $wgOut, $wgRequest, $atwgPrintoutsMustExist, $wgUseAjax, $atwgShowFacets, $wgContLang;
+		global $wgArticlePath;
+		
+		$queryString = $wgRequest->getText('sksquery');
+		$basePath = str_replace('$1', "Special:KeywordSearch", $wgArticlePath);
+		$uglyUrls = strstr($basePath, '?');
+		$params = ($uglyUrls ? "&" : "?") . "redirect=no&q=$queryString";
+		
+		$wgOut->addHTML("This is the first result for your query <i>'".
+						$queryString ."'</i>.  <a href='".
+						$basePath . $params .
+						"'>Choose another interpretation</a>");
 		
 		@parent::execute($p);
 		

@@ -32,6 +32,7 @@ class SKSSpecialPage extends SpecialPage {
 		$spectitle = $this->getTitleFor("KeywordSearch");
 		
 		$queryString = $wgRequest->getText('q');
+		$this->queryString = $queryString;
 		
 		$wgOut->setHTMLtitle("Semantic keyword search".($queryString?": interpretations for \"$queryString\"":""));
 
@@ -44,22 +45,23 @@ class SKSSpecialPage extends SpecialPage {
 		if ($queryString) {
 			$this->log("query: $queryString");
 			$qp = new SKSQueryTree( $queryString );
-			$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
-			$wgOut->addHTML( $this->outputInterpretations($qp->paths) ); 			
+			if ($wgRequest->getText('redirect') == 'no') {
+				$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
+				$wgOut->addHTML( $this->outputInterpretations($qp->paths) ); 
+			} else {
+				$wgOut->redirect( $this->getFirstResultUrl($qp->paths)."&sksquery=$queryString" );
+			}			
 		} else {			
 			global $sksgExampleQueries;
 			
 			$wgOut->addHTML( wfMsg('sks_enterkeywords') );
 			
 			if ($sksgExampleQueries) {
-				$wgOut->addHTML( '<p>' . wfMsg('sks_forexample') );
-				
-				$wgOut->addHTML( '<ul>' . 
-					implode(array_map(
-						create_function('$q', 'return "<li><a href=\'?q=$q\'>$q</a></li>";'),
-						$sksgExampleQueries
-					))
-				);
+				$wgOut->addHTML( '<p>' . wfMsg('sks_forexample') . '<ul>' );
+				foreach ($sksgExampleQueries as $q) {
+						$wgOut->addHTML("<li><a href='?title=Special:KeywordSearch&q=$q'>$q</a></li>");
+				}
+				$wgOut->addHTML( '</ul>' );
 			}
 		}
 
@@ -225,7 +227,8 @@ class SKSSpecialPage extends SpecialPage {
 			$query = $query['result'];
 			$result = $this->getAskQueryResult($query);
 			$errorString = $result['errorstring'];
-			$link = $result['link']->getURL()."&eq=no&format=skstable&mainlabel=$mainlabel";
+			$link = $result['link']->getURL().
+					"&eq=no&format=skstable&sksquery={$this->queryString}&mainlabel=$mainlabel";
 			$result = $result['content'];			
 			
 			$result = preg_replace_callback("/\<tr\>(.+?)\<\/th\>/si",
@@ -253,6 +256,22 @@ class SKSSpecialPage extends SpecialPage {
 			'</li><li>' . wfMsg('sks_choose_the_interpretation') . '</li><li>'.
 			wfMsg('sks_addremove_intr').'</li></ul>';
 		return $intro . $m;
+	}
+	
+	public function getFirstResultUrl($paths) {
+		foreach ($paths as $path) {
+			$query = $this->getAskQuery($path);
+			$mainlabel = $query['mainlabel'];
+			$result = $this->getAskQueryResult($query['result']);
+			$error = $result['errorstring'];
+			if (!$result['errorstring']) {
+				return $result['link']->getURL().
+					"&eq=no&sksquery={$this->queryString}&format=skstable&mainlabel=$mainlabel";
+			}
+		}
+		
+		return false;
+		
 	}
 	
 	
