@@ -5,7 +5,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 }
 
 $sfbgIP = dirname(__FILE__) . '/';
-$sfbgScriptPath = $atwgScriptPath . '/facetbrowser/jscss';
+$sfbgScriptPath = $atwQgScriptPath . '/facetbrowser/jscss';
 
 if ( !defined( 'ASKTHEWIKI' ) ) {
 /*    $wgExtensionCredits['specialpage'][] = array(
@@ -22,7 +22,6 @@ require_once( $sfbgIP . 'SFB_Settings.php' ); // sets some defaults
 
 $wgExtensionMessagesFiles['SemanticFacetBrowser'] = $sfbgIP . 'SFB.i18n.php';
 $wgDebugLogGroups[] = 'logs/askthewiki.log';
-
 $wgAutoloadClasses['FacetedAskPage'] = $sfbgIP . 'specials/SFB_SpecialAsk.php'; // extends Special:Ask
 $wgSpecialPages['Ask'] = 'FacetedAskPage'; 
 

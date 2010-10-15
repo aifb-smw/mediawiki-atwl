@@ -14,11 +14,11 @@ $wgExtensionCredits['specialpage'][] = array(
    'descriptionmsg' => 'atwl_atwldescription'
 );
 
-$atwgIP = dirname(__FILE__) . '/';
-$atwgScriptPath = $wgScriptPath . '/extensions/atwl';
+$atwQgIP = dirname(__FILE__) . '/';
+$atwQgScriptPath = $wgScriptPath . '/extensions/atwl';
 
-require_once( $atwgIP . "facetbrowser/SemanticFacetBrowser.php" );
-require_once( $atwgIP . "keywordsearch/SemanticKeywordSearch.php" );
-require_once( $atwgIP . "propertymap/CategoryPropertyMap.php" );
+require_once( $atwQgIP . "facetbrowser/SemanticFacetBrowser.php" );
+require_once( $atwQgIP . "keywordsearch/SemanticKeywordSearch.php" );
+require_once( $atwQgIP . "propertymap/CategoryPropertyMap.php" );
 
-//require_once( $atwgIP . "srfautomator/ ... " );
+//require_once( $atwQgIP . "srfautomator/ ... " );

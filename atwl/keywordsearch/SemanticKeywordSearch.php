@@ -5,7 +5,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 }
 
 $sksgIP = dirname(__FILE__) . '/';
-$sksgScriptPath = $atwgScriptPath . '/keywordsearch';
+$sksgScriptPath = $atwQgScriptPath . '/keywordsearch';
 require_once( $sksgIP . 'SKS_Settings.php' ); // sets some defaults
 
 // extension configuration options
