@@ -3,13 +3,13 @@ var urlParams; // array of url parameters for rebuilding the url
 
 function setupEvents() {
 	// setup events
-	jQuery("#facetsbutton").click(function() {
-		jQuery("#facettable").toggle();	
-		var html = jQuery("#facetsbutton").html();
+	jQuery("#atwQfacetsbutton").click(function() {
+		jQuery("#atwQfacettable").toggle();	
+		var html = jQuery("#atwQfacetsbutton").html();
 		if (html == 'Show facets') {
-			jQuery("#facetsbutton").html("Hide facets");
+			jQuery("#atwQfacetsbutton").html("Hide facets");
 		} else {
-			jQuery("#facetsbutton").html("Show facets");
+			jQuery("#atwQfacetsbutton").html("Show facets");
 		}
 	});
 }
@@ -17,14 +17,14 @@ function setupEvents() {
 jQuery(document).ready(function() {
 	setupEvents();
 	
-	jQuery("#facettable").hide();
+	jQuery("#atwQfacettable").hide();
 	
 	urlParams = getUrlParameters();
 	stripParams();
 	
 	if (urlParams["showFacetsOnLoad"] == '1') { // for use with non-Ajax
-		jQuery("#facettable").show();
-		jQuery("#facetsbutton").html("Hide facets");
+		jQuery("#atwQfacettable").show();
+		jQuery("#atwQfacetsbutton").html("Hide facets");
 	}
 
 });
@@ -87,7 +87,7 @@ function updateTable() {
 		urlParams['SFBAjax'] = 1;
 		jQuery.get('?', urlParams, function (data) {
 			// a little ugly, but works
-			var facetbox = jQuery("#facetbox");
+			var facetbox = jQuery("#atwQfacetbox");
 			jQuery("#bodyContent").html(data);
 			facetbox.appendTo("#bodyContent");
 			setupEvents();

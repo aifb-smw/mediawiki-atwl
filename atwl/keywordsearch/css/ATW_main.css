@@ -31,31 +31,31 @@ ul .smwtable  {
 	float: none;
 }
 
-#options {
+#atwQoptions {
 	border: 2px solid #60A8AC;
 	margin: 10px;
 }
 
-#result {
+#atwQresult {
 	margin: 10px;
 }
 
-#facets {
+#atwQfacets {
 	border: 2px solid #60A8AC;
 	width: 30%;
 	float: right;
 	margin:5px;
 }
 
-#facets ul {
+#atwQfacets ul {
 	list-style: none;
 	margin: 0.3em 0px 0px 0.3em;
 }
-#facets ul li {
+#atwQfacets ul li {
 	margin-left: -5px;
 }
 
-#format {
+#atwQformat {
 	border: 2px solid #60A8AC;
 	width: 60%;
 	float: left;

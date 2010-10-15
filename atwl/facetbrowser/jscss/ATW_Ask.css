@@ -1,4 +1,4 @@
-#facetsbutton {
+#atwQfacetsbutton {
 	/*position: auto;*/
 	/*right: 50px;
 	top: 25px;*/
@@ -11,7 +11,7 @@
 
 
 
-#facetbox { 
+#atwQfacetbox { 
 	position: absolute;
 	right: 50px;
 	top: 25px;
@@ -25,11 +25,11 @@
 
 
 
-#facetoptions {
+#atwQfacetoptions {
 	float: right;
 }
 
-#facettable {
+#atwQfacettable {
 	/*position: auto;*/
 	/*float: right;*/
 	border: 1px solid #AAAAAA;
@@ -42,19 +42,19 @@
 	/*width: auto;*/
 }
 
-#facetbox table .smwtable {
+#atwQfacetbox table .smwtable {
 	border: 1px solid #AAAAAA;
 	border-spacing: 0px 2px;
 }
 
 /*
-#facetbox table.smwtable tr {
+#atwQfacetbox table.smwtable tr {
 	border-top: 0;
 	margin-top: 0;
 	padding-top: 0;
 }
 
-#facetbox table.smwtable td {
+#atwQfacetbox table.smwtable td {
 	border-left: 0;
 	border-right: 0;
 	padding: 0;
@@ -63,12 +63,12 @@
 */
 
 /*
-#facetbox ul {
+#atwQfacetbox ul {
 	list-style: none;
 	
 }
 
-#facetbox ul li {
+#atwQfacetbox ul li {
 	margin-left: -5px;
 }
 */

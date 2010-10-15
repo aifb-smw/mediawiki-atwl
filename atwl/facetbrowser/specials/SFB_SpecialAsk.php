@@ -60,9 +60,9 @@ class FacetedAskPage extends SMWAskPage {
 		}
 		*/
 		
-		$wgOut->addHTML('<div id="facetbox"><div style="float: right;">'.
-						'<div id="facetsbutton" width="50px" height="100px">Show facets</div>'.
-						'<div id="facettable">'.$this->getFacetsTableHTML($facets).'</div></div></div>');					
+		$wgOut->addHTML('<div id="atwQfacetbox"><div style="float: right;">'.
+						'<div id="atwQfacetsbutton" width="50px" height="100px">Show facets</div>'.
+						'<div id="atwQfacettable">'.$this->getFacetsTableHTML($facets).'</div></div></div>');					
 		$this->addScripts();
 	}
 	
