@@ -10,7 +10,7 @@ $wgExtensionCredits['specialpage'][] = array(
    'name' => 'AskTheWiki - AskQ!',
    'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]', '[http://www.aifb.kit.edu/web/Daniel_M._Herzig/en Daniel Herzig]'), 
    'url' => 'http://www.aifb.kit.edu/web/Wissensmanagement', 
-   'version' => 0.5, 
+   'version' => '0.5 ALPHA (no warranty! use at your own risk.)', 
    'descriptionmsg' => 'atwl_atwldescription'
 );
 

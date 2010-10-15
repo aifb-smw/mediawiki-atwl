@@ -68,10 +68,33 @@ class SKSSpecialPage extends SpecialPage {
 				}
 				$wgOut->addHTML( '</ul>' );
 			}
+			
+			$wgOut->addHTML('<br /><br />'.$this->getCategories($wgRequest->getText( 'from' )).'<br />');
 		}
-
+		
 		wfProfileOut('ATWL:execute');
 	}
+	
+	
+	function getCategories($from){
+		global $wgOut;
+		
+		
+		$cap = new CategoryStarter( $from );
+		$wgOut->addHTML(
+		//	XML::openElement( 'div', array('class' => 'mw-spcontent') ) .
+			wfMsg('sks_choosecat') .
+			$cap->getStartForm( $from ) .
+			$cap->getNavigationBar() .
+			'<ul>' . $cap->getBody() . '</ul>' .
+			$cap->getNavigationBar() 
+		//	.XML::closeElement( 'div' )
+		); 
+		
+		
+		return "cats!";
+	}
+	
 	
 	/**
 	 * takes $interpretation, an ordered array of SKSKeyword objects
@@ -286,6 +309,32 @@ class SKSSpecialPage extends SpecialPage {
 		if ($sksgEnableLogging) {
 			wfDebugLog( 'AskTheWiki', $string );
 		}
+	}
+	
+}
+
+class CategoryStarter extends CategoryPager{
+	
+	function __construct( $from ) {
+		parent::__construct($from);
+		$from = str_replace( ' ', '_', $from );
+		if( $from !== '' ) {
+			global $wgCapitalLinks, $wgContLang;
+			if( $wgCapitalLinks ) {
+				$from = $wgContLang->ucfirst( $from );
+			}
+			$this->mOffset = $from;
+		}
+	}
+	
+	function formatRow($result) {
+		global $wgLang,$wgContLang;
+		$title = Title::makeTitle( NS_CATEGORY, $result->cat_title );
+		$titleText = '<a href="'.$this->getSkin()->makeSpecialUrl( 'Ask',htmlspecialchars( 'x=[['.$wgContLang->getNsText ( NS_CATEGORY ).':'.$title->getText().']]' ) .'">'. htmlspecialchars( $title->getText()) .'</a>');
+		
+		$count = wfMsgExt( 'nmembers', array( 'parsemag', 'escape' ),
+				$wgLang->formatNum( $result->cat_pages ) );
+		return Xml::tags('li', null, "$titleText ($count)" ) . "\n";
 	}
 	
 }

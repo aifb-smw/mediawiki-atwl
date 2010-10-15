@@ -7,6 +7,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 $sksgIP = dirname(__FILE__) . '/';
 $sksgScriptPath = $atwQgScriptPath . '/keywordsearch';
 require_once( $sksgIP . 'SKS_Settings.php' ); // sets some defaults
+require_once($IP.'/includes/specials/SpecialCategories.php');
 
 // extension configuration options
 
@@ -30,6 +31,8 @@ function wfSKSSetup() {
 	$wgAutoloadClasses['SKSKeywordStore']  		= $sksgIP . 'includes/SKS_KeywordStore.php';
 	$wgAutoloadClasses['SKSSpecialPage']   		= $sksgIP. 'specials/SKS_Special.php';
 	$wgAutoloadClasses['SKSTableResultPrinter'] = $sksgIP. 'includes/SKS_QP_Table.php';
+	
+		
 	
 	$wgSpecialPages['KeywordSearch'] = 'SKSSpecialPage';
 	
