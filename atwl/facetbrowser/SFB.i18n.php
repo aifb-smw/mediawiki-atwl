@@ -15,7 +15,8 @@ $messages['en'] = array(
     
     'sfb_occurrences' => 'Occurrences',
     
-    'keywordsearch' => 'AskTheWiki - AskQ!'
+    'keywordsearch' => 'AskTheWiki - AskQ!',
+    'specialpages-group-atw_group' => 'Ask The Wiki'
 );
 
 

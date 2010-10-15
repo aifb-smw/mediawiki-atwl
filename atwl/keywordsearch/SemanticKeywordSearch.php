@@ -10,12 +10,12 @@ require_once( $sksgIP . 'SKS_Settings.php' ); // sets some defaults
 
 // extension configuration options
 
-$wgExtensionCredits['specialpage'][] = array(
+/*$wgExtensionCredits['specialpage'][] = array(
 	'name' => 'Semantic Keyword Search',
 	'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]', 'Daniel Herzig'), 
 	'url' => '', 
 	'descriptionmsg' => 'atwl_atwldescription'
-);
+);*/
 $wgExtensionMessagesFiles['SemanticKeywordSearch'] = $sksgIP . 'SKS.i18n.php';
 $wgExtensionFunctions[] = 'wfSKSSetup';
 

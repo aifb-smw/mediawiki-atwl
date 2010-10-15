@@ -8,12 +8,12 @@ $sfbgIP = dirname(__FILE__) . '/';
 $sfbgScriptPath = $atwgScriptPath . '/facetbrowser/jscss';
 
 if ( !defined( 'ASKTHEWIKI' ) ) {
-    $wgExtensionCredits['specialpage'][] = array(
+/*    $wgExtensionCredits['specialpage'][] = array(
 	    'name' => 'Semantic Facet Browser',
 	    'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]', 'Daniel Herzig'), 
 	    'url' => '', 
 	    'descriptionmsg' => 'atwl_atwldescription'
-    );
+    );*/
 }
 
 

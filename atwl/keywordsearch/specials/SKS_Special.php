@@ -4,6 +4,11 @@ class SKSSpecialPage extends SpecialPage {
 	
 	public function __construct() {
 		parent :: __construct('KeywordSearch');
+		
+		if (method_exists('SpecialPage', 'setGroup')) {
+			parent :: setGroup('KeywordSearch', 'atw_group');
+		}
+		
 	}
 
 	public function execute($p) {
