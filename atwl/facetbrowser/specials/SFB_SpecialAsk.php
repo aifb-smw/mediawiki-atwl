@@ -102,8 +102,17 @@ class FacetedAskPage extends SMWAskPage {
 		//include jQuery UI for draggable facets box
 		//$wgOut->addScript( '<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>' );
 		
+		//$wgOut->addStyle( $sfbgScriptPath . '/ATW_Ask.css' );
+		//add styles like this:
+		$wgOut->addLink( array(
+			'rel' => 'stylesheet',
+			'type' => 'text/css',
+			'media' => "screen, projection, print",
+			'href' => $atwgScriptPath . $sfbgScriptPath . '/ATW_Ask.css'
+		));
+		
 		$wgOut->addScriptFile( $sfbgScriptPath . '/ATW_facets.js' );		
-		$wgOut->addStyle( $sfbgScriptPath . '/ATW_Ask.css' );	
+		
 	}
 	
 	public function getAjaxResult($p) {
