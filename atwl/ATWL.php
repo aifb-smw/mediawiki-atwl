@@ -16,8 +16,7 @@ $wgExtensionCredits['specialpage'][] = array(
 
 $atwQgIP = dirname(__FILE__) . '/';
 
-//TODO: for some unknown reason the $wgScriptPath seems to be wrong if "pretty url" is used
-$atwQgScriptPath = $wgScriptPath . '/portal/extensions/atwl';
+$atwQgScriptPath = $wgScriptPath . '/extensions/atwl';
 
 require_once( $atwQgIP . "keywordsearch/SemanticKeywordSearch.php" );
 require_once( $atwQgIP . "facetbrowser/SemanticFacetBrowser.php" );
