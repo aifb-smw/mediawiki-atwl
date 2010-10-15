@@ -3,12 +3,14 @@
 class FacetedAskPage extends SMWAskPage {
 	public function __construct() {
 		parent::__construct();
-		smwfLoadExtensionMessages( 'SemanticFacetBrowser' );
+		
 	}
 	
 	function execute( $p ) {
 		global $wgOut, $wgRequest, $atwgPrintoutsMustExist, $wgUseAjax, $atwgShowFacets, $wgContLang;
 		global $wgArticlePath;
+		
+		wfLoadExtensionMessages( 'SemanticFacetBrowser' );	
 		
 		$queryString = $wgRequest->getText('sksquery');
 		$basePath = str_replace('$1', "Special:KeywordSearch", $wgArticlePath);

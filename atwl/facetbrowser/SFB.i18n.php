@@ -13,7 +13,9 @@ $messages['en'] = array(
     
     'atwl_askfacets_property' => 'Property',
     
-    'sfb_occurrences' => 'Occurrences'
+    'sfb_occurrences' => 'Occurrences',
+    
+    'KeywordSearch' => 'AskTheWiki - ask'
 );
 
 
