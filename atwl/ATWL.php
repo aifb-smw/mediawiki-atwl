@@ -7,7 +7,7 @@ if( !defined( 'MEDIAWIKI' ) ) {
 define( 'ASKTHEWIKI', 1 );
 
 $wgExtensionCredits['specialpage'][] = array(
-   'name' => 'AskTheWiki - ',
+   'name' => 'AskTheWiki - AskQ!',
    'author' => array('[http://mediawiki.org/wiki/User:Michael_A._White Michael White]', '[http://www.aifb.kit.edu/web/Daniel_M._Herzig/en Daniel Herzig]'), 
    'url' => 'http://www.aifb.kit.edu/web/Wissensmanagement', 
    'version' => 0.5, 
