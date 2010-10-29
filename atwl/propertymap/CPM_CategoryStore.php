@@ -104,7 +104,10 @@ class CPMCategoryStore {
 			return array_slice($facets['all'], $offset, $limit);			
 		}		
 	}
-	
+
+	/**
+	 * gets all the properties for a page
+	 */	
 	public function fetchAllPage($pagename) {
 		global $wgContLang;
 		if (preg_match("/^(.+?)\:(.+)/", $pagename, $matches)) {
