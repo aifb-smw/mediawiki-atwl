@@ -106,10 +106,50 @@ class CPMCategoryStore {
 	}
 	
 	public function fetchAllPage($pagename) {
+		global $wgContLang;
+		if (preg_match("/^(.+?)\:(.+)/", $pagename, $matches)) {
+			$ns = $wgContLang->getNsIndex( $matches[1] );
+			$title = $matches[2];
+		} else {
+			$ns = NS_MAIN;
+			$title = $pagename;
+		}
 		
+		$page = SMWWikiPageValue::makePage($title, $ns);
+		$semdata = smwfGetStore()->getSemanticData($pagename);
+
+		$all = array();
+		foreach (smwfGetStore()->getProperties($page) as $property) {
+			$all[$property->getText()] = 1;
+			// actually it could be >1 if a page has more than one instance for a category
+			// fix that later
+		}
+		
+		// maybe add differentiation for rel/att properties later
+		return array('all' => $all);
 	}
 	
-	public function fetchAllMultiplePages($pagenames) {
+	public function fetchAllMultiplePages($pagenames, $selectedProps=array() ) {
+		$props = array();
+		foreach ($pagenames as $p) {
+			$res = self::fetchAllPage($p);
+			foreach ($res['all'] as $propName => $count) {
+				@$props[$propName] += $count;
+			}
+		}
+
+		$ret = array();
+		foreach ($props as $name => $count) {
+			$ret[] = array(
+				'name' => $name, 
+				'key'  => str_replace(' ', '_', $name),
+				'count' => $count, 
+				'checked' => array_intersect(array($name, ucfirst($name)), array_keys($selectedProps)) ? true : false,
+				'label' => @$selectedProps[$name]
+			);
+		}
+		return $ret;
+	
 	}
 	
 	/**

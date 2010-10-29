@@ -18,6 +18,7 @@ class SKSSpecialPage extends SpecialPage {
 		wfProfileIn('ATWL:execute');
 		
 		wfLoadExtensionMessages('SemanticKeywordSearch');
+		$redirect = $wgRequest->getText('redirect') == 'no';
 		
 		$atwKwStore = new SKSKeywordStore();		
 		$atwCatStore = new CPMCategoryStore();
@@ -50,7 +51,7 @@ class SKSSpecialPage extends SpecialPage {
 		if ($queryString) {
 			$this->log("query: $queryString");
 			$qp = new SKSQueryTree( $queryString );
-			if ($wgRequest->getText('redirect') == 'no') {
+			if ($redirect) {
 				$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
 				$wgOut->addHTML( $this->outputInterpretations($qp->paths) ); 
 			} else {

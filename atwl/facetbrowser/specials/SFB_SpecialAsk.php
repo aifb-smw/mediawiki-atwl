@@ -16,12 +16,14 @@ class FacetedAskPage extends SMWAskPage {
 		$basePath = str_replace('$1', "Special:KeywordSearch", $wgArticlePath);
 		$uglyUrls = strstr($basePath, '?');
 		$params = ($uglyUrls ? "&" : "?") . "redirect=no&q=$queryString";
-		
-		$wgOut->addHTML("This is the first result for your query <i>'".
+
+		if ($queryString) {	
+			$wgOut->addHTML("This is the first result for your query <i>'".
 						$queryString ."'</i>.  <a href='".
 						$basePath . $params .
 						"'>Choose another interpretation</a>");
-		
+		}
+
 		@parent::execute($p);
 		
 		if ($wgRequest->getText('eq') == 'yes')
@@ -39,19 +41,34 @@ class FacetedAskPage extends SMWAskPage {
 			preg_match("/.*\:(.*)\:(.*)\:.*\:.*/", $p->getHash(), $matches);
 			$printouts[$matches[2]] = $matches[1];
 		}
+
+
+		// extract page names in query subject from processed querystring
+		$catNs = $wgContLang->getNsText( NS_CATEGORY );
+		preg_match("/^\[\[(.+?)\]\]/", $this->m_querystring, $matches);
+		$pages = array();
+		foreach (explode("|", $matches[1]) as $page) {
+			if (strpos(strtolower($page), strtolower("$catNs:")) !== 0) {
+				$pages[] = $page;
+			}
+		}
+
+		if (!$pages) {				
+			// extract category names from processed querystring
+			preg_match_all("/\[\[$catNs:(.+?)\]\]/i", $this->m_querystring, $matches);
+			$cats = $matches[1];
 		
-		// extract category names from processed querystring
-		$catNs = $wgContLang->getNsText ( NS_CATEGORY );
-		preg_match_all("/\[\[$catNs:(.+?)\]\]/i", $this->m_querystring, $matches);
-		$cats = $matches[1];
-		
-		// get an array of all properties, with name, key (spaces replaced with _), whether checked, and how many instances for these categories
-		$facets = CPMCategoryStore::fetchAllMultiple($cats, $printouts);
+			// get an array of all properties, with name, key (spaces replaced with _), whether checked, and how many instances for these categories
+			$facets = CPMCategoryStore::fetchAllMultiple($cats, $printouts);
+		} else {
+			$facets = CPMCategoryStore::fetchAllMultiplePages($pages, $printouts);
+		}
+
 		
 		$wgOut->addInlineScript('var facets = ' . json_encode($facets) . ';'. "\n" .
-								'var printoutsMustExist = '.($atwgPrintoutsMustExist?1:0) . "\n" .
-								'var queryString = "'.str_replace('"', '\"', $this->m_querystring).'";'  . "\n" .
-								'var wgUseAjax = '.($wgUseAjax ? 1:0). ';' );
+					'var printoutsMustExist = '.($atwgPrintoutsMustExist?1:0) . "\n" .
+					'var queryString = "'.str_replace('"', '\"', $this->m_querystring).'";'  . "\n" .
+					'var wgUseAjax = '.($wgUseAjax ? 1:0). ';' );
 		
 		/*
 		if ($wgRequest->getCheck('atwQueryString')) {
@@ -108,7 +125,7 @@ class FacetedAskPage extends SMWAskPage {
 			'rel' => 'stylesheet',
 			'type' => 'text/css',
 			'media' => "screen, projection, print",
-			'href' => $atwgScriptPath . $sfbgScriptPath . '/ATW_Ask.css'
+			'href' => $sfbgScriptPath . '/ATW_Ask.css'
 		));
 		
 		$wgOut->addScriptFile( $sfbgScriptPath . '/ATW_facets.js' );		
