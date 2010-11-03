@@ -12,7 +12,7 @@ class FacetedAskPage extends SMWAskPage {
 		
 		wfLoadExtensionMessages( 'SemanticFacetBrowser' );	
 		
-		$queryString = $wgRequest->getText('sksquery');
+		$queryString = urldecode($wgRequest->getText('sksquery'));
 		$basePath = str_replace('$1', "Special:KeywordSearch", $wgArticlePath);
 		$uglyUrls = strstr($basePath, '?');
 		$params = ($uglyUrls ? "&" : "?") . "redirect=no&q=$queryString";
@@ -24,16 +24,24 @@ class FacetedAskPage extends SMWAskPage {
 						"'>Choose another interpretation</a>");
 		}
 
+		// soo hacky but easier than preventing automatic jQuery url-encoding
+//		$wgRequest->setVal('q', preg_replace('/%2B/', '+', $wgRequest->getText('q')));
+
 		@parent::execute($p);
 		
 		if ($wgRequest->getText('eq') == 'yes')
 			return;				
-			
+
+		
+				
 		if ($wgRequest->getText('SFBAjax') == '1') {
 			$wgOut->disable();
 			echo $wgOut->getHTML();
 			return;
 		}
+		
+		
+		
 		
 		// get the printout properties and labels
 		$printouts = array();

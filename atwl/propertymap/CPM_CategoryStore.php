@@ -135,7 +135,7 @@ class CPMCategoryStore {
 	public function fetchAllMultiplePages($pagenames, $selectedProps=array() ) {
 		$props = array();
 		foreach ($pagenames as $p) {
-			$res = self::fetchAllPage($p);
+			$res = self::fetchAllPage(ucfirst($p)); 	// hacky
 			foreach ($res['all'] as $propName => $count) {
 				@$props[$propName] += $count;
 			}

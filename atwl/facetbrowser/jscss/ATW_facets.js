@@ -63,7 +63,7 @@ function updateTable() {
 	for (var i in facets) {
 		if (facets[i]['checked']) {
 			if (printoutsMustExist) {
-				urlParams['q'] += "[["+facets[i]['name']+"::%2B]]";
+				urlParams['q'] += "[["+facets[i]['name']+"::+]]";
 			}
 			
 			if (facets[i]['label'] == null || facets[i]['label'] == facets[i]['name']) {
