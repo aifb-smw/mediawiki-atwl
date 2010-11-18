@@ -31,6 +31,7 @@ jQuery(document).ready(function() {
 
 function stripParams() {
 	// remove [[Property:+]] statements, which will be rebuilt
+
 	urlParams["q"] = queryString.replace(/\[\[[^\[\]]+?\:\:(\+|%2B)\]\]/gi, "");
 	urlParams["q"] = urlParams["q"].replace(/%5B%5B[^%]+?%3A%3A%2B%5D%5D/gi, "");
 	urlParams["po"] = '';	
@@ -60,10 +61,17 @@ function setFacetLabel(key, label) {
 function updateTable() {
 	// construct the q and po URL parameters
 	urlParams['po'] = '';
+	
+	// Basil: remove parts for facets such as [[Name::+]].
+	var val = urlParams['q'];	
+	val = val.replace(/\[\[[^\[\]]*::\+\]\]/g, "");
+	urlParams['q'] = val;
+
 	for (var i in facets) {
 		if (facets[i]['checked']) {
 			if (printoutsMustExist) {
 				urlParams['q'] += "[["+facets[i]['name']+"::+]]";
+				//alert("add [[...::+]]" + facets[i]['name']);
 			}
 			
 			if (facets[i]['label'] == null || facets[i]['label'] == facets[i]['name']) {
@@ -81,7 +89,6 @@ function updateTable() {
 	for (p in urlParams) {
 		paramsString += p+"="+urlParams[p]+"&";
 	}
-	//alert(paramsString);
 	
 	if (wgUseAjax) {
 		urlParams['SFBAjax'] = 1;
