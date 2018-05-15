@@ -93,7 +93,7 @@ class SKSSpecialPage extends SpecialPage {
 		); 
 		
 		
-		return "cats!";
+		return "";
 	}
 	
 	

@@ -1,11 +1,13 @@
 <?php
 
 $sksgExampleQueries = array(
-	'tool status license GPL homepage', 
-	'person email homepage',
-	'Semantic Web events 2008 has location country USA',
-	'Germany population',
-	'population less than 100000'
+ 	'Mitarbeiter email raum',
+ 	'book title'
+//	'tool status license GPL homepage', 
+//	'person email homepage',
+//	'Semantic Web events 2008 has location country USA',
+//	'Germany population',
+//	'population less than 100000'
 );
 
 // enable logging of queries and interpretation choices
