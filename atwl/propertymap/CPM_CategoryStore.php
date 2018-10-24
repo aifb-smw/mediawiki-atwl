@@ -71,7 +71,7 @@ class CPMCategoryStore {
 	public function fetchAllMultiple(array $categoryNames, $selectedProps = array()) {
 		$props = array();
 		foreach ($categoryNames as $c) {
-			$res = self::fetchAll($c);
+			$res = $this->fetchAll($c);
 			foreach ($res['all'] as $propName => $count) { 
 				@$props[$propName] += $count; 
 			}
@@ -100,7 +100,7 @@ class CPMCategoryStore {
 		if (isset($this->store[$categoryname]) && count($this->store[$categoryname]) >= $offset + $limit) {
 			return array_slice($this->store[$categoryname]['all'], $offset, $limit);
 		} else {
-			$facets = self::fetchAll($categoryname, $limit);
+			$facets = $this->fetchAll($categoryname, $limit);
 			return array_slice($facets['all'], $offset, $limit);			
 		}		
 	}
@@ -117,9 +117,7 @@ class CPMCategoryStore {
 			$ns = NS_MAIN;
 			$title = $pagename;
 		}
-		
-		$page = SMWWikiPageValue::makePage($title, $ns);
-		$semdata = smwfGetStore()->getSemanticData($pagename);
+		$page = \SMW\DIWikiPage::newFromText($title, $ns);
 
 		$all = array();
 		foreach (smwfGetStore()->getProperties($page) as $property) {
@@ -135,7 +133,7 @@ class CPMCategoryStore {
 	public function fetchAllMultiplePages($pagenames, $selectedProps=array() ) {
 		$props = array();
 		foreach ($pagenames as $p) {
-			$res = self::fetchAllPage(ucfirst($p)); 	// hacky
+			$res = $this->fetchAllPage(ucfirst($p)); 	// hacky
 			foreach ($res['all'] as $propName => $count) {
 				@$props[$propName] += $count;
 			}

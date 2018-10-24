@@ -17,7 +17,7 @@ class SKSSpecialPage extends SpecialPage {
 		global $sksgScriptPath;
 		wfProfileIn('ATWL:execute');
 		
-		wfLoadExtensionMessages('SemanticKeywordSearch');
+		//wfLoadExtensionMessages('SemanticKeywordSearch'); // https://www.mediawiki.org/wiki/WfLoadExtensionMessages
 		$redirect = $wgRequest->getText('redirect') == 'no';
 		
 		$atwKwStore = new SKSKeywordStore();		
@@ -43,7 +43,7 @@ class SKSSpecialPage extends SpecialPage {
 		$wgOut->setHTMLtitle("Semantic keyword search".($queryString?": interpretations for \"$queryString\"":""));
 
 		// query input textbox form
-		$m = '<form method="get" action="'. $spectitle->escapeLocalURL() .'">' .
+		$m = '<form method="get" action="'. htmlspecialchars($spectitle->getLocalURL()) .'">' . //https://www.mediawiki.org/wiki/Topic:S9djzm8reyq6ig5f
 		     '<input size="50" type="text" name="q" value="'.str_replace('"', '\"', $queryString).'" />' .
 		     '<input type="submit" value="Submit" /> </form>';
 		$wgOut->addHTML($m);
@@ -52,7 +52,7 @@ class SKSSpecialPage extends SpecialPage {
 			$this->log("query: $queryString");
 			$qp = new SKSQueryTree( $queryString );
 			if ($redirect) {
-				$wgOut->addHTML( wfMsg('sks_chooseinterpretation') );
+				$wgOut->addHTML( wfMessage('sks_chooseinterpretation')->text() );
 				$wgOut->addHTML( $this->outputInterpretations($qp->paths) ); 
 			} else {
 				$wgOut->redirect( $this->getFirstResultUrl($qp->paths)."&sksquery=$queryString" );
@@ -60,10 +60,10 @@ class SKSSpecialPage extends SpecialPage {
 		} else {			
 			global $sksgExampleQueries;
 			
-			$wgOut->addHTML( wfMsg('sks_enterkeywords') );
+			$wgOut->addHTML( wfMessage('sks_enterkeywords')->text() );
 			
 			if ($sksgExampleQueries) {
-				$wgOut->addHTML( '<p>' . wfMsg('sks_forexample') . '<ul>' );
+				$wgOut->addHTML( '<p>' . wfMessage('sks_forexample')->text() . '<ul>' );
 				foreach ($sksgExampleQueries as $q) {
 						$wgOut->addHTML("<li><a href='?title=Special:KeywordSearch&q=$q'>$q</a></li>");
 				}
@@ -81,10 +81,10 @@ class SKSSpecialPage extends SpecialPage {
 		global $wgOut;
 		
 		
-		$cap = new CategoryStarter( $from );
+		$cap = new CategoryStarter($this->getContext(), $from, $this->getLinkRenderer());
 		$wgOut->addHTML(
 		//	XML::openElement( 'div', array('class' => 'mw-spcontent') ) .
-			wfMsg('sks_choosecat') .
+      wfMessage('sks_choosecat')->text() .
 			$cap->getStartForm( $from ) .
 			$cap->getNavigationBar() .
 			'<ul>' . $cap->getBody() . '</ul>' .
@@ -128,7 +128,7 @@ class SKSSpecialPage extends SpecialPage {
 		for ($i = 0; $i<count($interpretation); $i++) {
 			$nextType = @$interpretation[$i+1]->type;		
 			$prevType = @$interpretation[$i-1]->type;	
-			$prevKeyword = @$interpretations[$i-1]->keyword;
+			$prevKeyword = @$interpretation[$i-1]->keyword;
 			$kw = $interpretation[$i];
 			
 			if ($kw->type == ATW_PROP && ($nextType == ATW_PROP || !$nextType) ) {
@@ -214,9 +214,11 @@ class SKSSpecialPage extends SpecialPage {
 		SMWQueryProcessor::processFunctionParams( $rawparams, $querystring, $params, $printouts);
 		$params['format'] = $format;
 		$params['limit'] = 5;
+
+		$processedParams = SMWQueryProcessor::getProcessedParams($params);
 		
 		return array(
-			'result' => SMWQueryProcessor::createQuery( $querystring, $params, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts ),
+			'result' => SMWQueryProcessor::createQuery( $querystring, $processedParams, SMWQueryProcessor::SPECIAL_PAGE , $params['format'], $printouts ),
 			'mainlabel' => $mainlabel
 		);
 	}
@@ -232,9 +234,9 @@ class SKSSpecialPage extends SpecialPage {
 			$result = $query_result;
 		}
 		
-		$errorString = $printer->getErrorString( $res );
+		//$errorString = $printer->getErrorString( $res ); //FIXME
 		
-		return array('errorstring' => $errorString, 'content' => $result, 'link' => $res->getQueryLink() );		
+		return array('errorstring' => null, 'content' => $result, 'link' => $res->getQueryLink() );
 	}
 	
 	/**
@@ -244,7 +246,7 @@ class SKSSpecialPage extends SpecialPage {
 		global $atwCatStore, $wgScriptPath;
 		
 		if (count($paths) == 0) {
-			return wfMsg('sks_no_valid_interpretations', $this->queryString);
+			return wfMessage('sks_no_valid_interpretations', $this->queryString)->text();
 		}
 		
 		$count = 0;
@@ -281,9 +283,9 @@ class SKSSpecialPage extends SpecialPage {
 		$m .= "</ul>";
 		
 		$intro = '<ul><li>'.
-			wfMsg('sks_n_interpretations_' .($count==1 ? 'singular' : 'plural'), $count).
-			'</li><li>' . wfMsg('sks_choose_the_interpretation') . '</li><li>'.
-			wfMsg('sks_addremove_intr').'</li></ul>';
+      wfMessage('sks_n_interpretations_' .($count==1 ? 'singular' : 'plural'))->text().
+			'</li><li>' . wfMessage('sks_choose_the_interpretation')->text() . '</li><li>'.
+      wfMessage('sks_addremove_intr')->text().'</li></ul>';
 		return $intro . $m;
 	}
 	
@@ -316,8 +318,8 @@ class SKSSpecialPage extends SpecialPage {
 
 class CategoryStarter extends CategoryPager{
 	
-	function __construct( $from ) {
-		parent::__construct($from);
+	function __construct($context, $from, $linkRenderer ) {
+		parent::__construct($context, $from, $linkRenderer);
 		$from = str_replace( ' ', '_', $from );
 		if( $from !== '' ) {
 			global $wgCapitalLinks, $wgContLang;
@@ -332,9 +334,11 @@ class CategoryStarter extends CategoryPager{
 		global $wgLang,$wgContLang;
 		$title = Title::makeTitle( NS_CATEGORY, $result->cat_title );
 		$titleText = '<a href="'.$this->getSkin()->makeSpecialUrl( 'Ask',htmlspecialchars( 'x=[['.$wgContLang->getNsText ( NS_CATEGORY ).':'.$title->getText().']]' ) .'">'. htmlspecialchars( $title->getText()) .'</a>');
-		
-		$count = wfMsgExt( 'nmembers', array( 'parsemag', 'escape' ),
-				$wgLang->formatNum( $result->cat_pages ) );
+
+		// https://www.mediawiki.org/wiki/Manual:Messages_API#Help_with_replacing_deprecated_wfMsg*_functions
+		//$count = wfMsgExt( 'nmembers', array( 'parsemag', 'escape' ),
+		//		$wgLang->formatNum( $result->cat_pages ) );
+    $count = wfMessage( 'nmembers', $wgLang->formatNum( $result->cat_pages ) )->text();
 		return Xml::tags('li', null, "$titleText ($count)" ) . "\n";
 	}
 	

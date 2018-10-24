@@ -3,7 +3,6 @@
 class CPMCategoryBox {
 	
 	public function getCategoryBoxText($title) {
-		echo "aaaaaaaaaaaaaaaaaaa";
 		if ($title->getNamespace() != NS_CATEGORY) {
 			$ret = '';
 		} else {
