@@ -1,0 +1,12 @@
+{
+	"name": "aifb-smw/mediawiki-atwl",
+	"type": "mediawiki-extension",
+	"description": "An extension for Semantic MediaWiki that aims to make it easier for users to perform semantic queries without having to know the Ask query syntax",
+	"require": {
+		"composer/installers": "~1.0"
+	},
+
+	"extra": {
+		"installer-name": "Atwl"
+	}
+}
