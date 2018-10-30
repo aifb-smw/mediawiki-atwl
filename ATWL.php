@@ -16,7 +16,7 @@ $wgExtensionCredits['specialpage'][] = array(
 
 $atwQgIP = dirname(__FILE__) . '/';
 
-$atwQgScriptPath = $wgScriptPath . '/extensions/atwl';
+$atwQgScriptPath = $wgScriptPath . '/extensions/Atwl';
 
 require_once( $atwQgIP . "keywordsearch/SemanticKeywordSearch.php" );
 require_once( $atwQgIP . "facetbrowser/SemanticFacetBrowser.php" );
